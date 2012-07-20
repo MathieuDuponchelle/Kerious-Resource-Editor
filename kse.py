@@ -3,6 +3,10 @@
 import sys
 import gtk
 import gobject
+import argparse
+import logging
+import sys
+
 from krfparser import KrfParser
 from photoshop import Photoshop
 from optparse import OptionParser
@@ -179,6 +183,7 @@ class KSETree(gtk.TreeView):
 class KSEStatusView(gtk.Notebook):
     def __init__(self):
         gtk.Notebook.__init__(self)
+        self.logger = logging.getLogger("KRFEditor")
         self.photoshop = Photoshop()
         scrolledWindow = gtk.ScrolledWindow()
         scrolledWindow.add_with_viewport(self.photoshop)
@@ -186,7 +191,12 @@ class KSEStatusView(gtk.Notebook):
         self.show_all()
 
     def openPath(self, filePath):
-        self.photoshop.displayImage(filePath)
+        try:
+            self.photoshop.loadImage(filePath)
+            self.photoshop.displayImage()
+        except:
+            ErrorMessage("Invalid path !")
+            self.logger.error("Invalid path submitted to photoshop loading : %s", filePath)
 
 class KSEWorkzone(gtk.VPaned):
     def __init__(self):
@@ -263,7 +273,7 @@ class GraphicSection(Section):
         self.workzone.createTree(self.tree)
 
 class KSEActivityView(gtk.Notebook):
-    def __init__(self):
+    def __init__(self, fileName):
         gtk.Notebook.__init__(self)
         self.show()
 
@@ -298,7 +308,7 @@ class KSEActivityView(gtk.Notebook):
                         elif soundSection.name == "musics":
                             self.musics.createTree(soundSection)
         return ret
-        
+
     def openFile(self, fileName):
         userOk = False
         if self.xmlHandler is not None:
@@ -310,7 +320,7 @@ class KSEActivityView(gtk.Notebook):
             self.graphics.createTree(self.xmlHandler)
 
 class KSEWindow(gobject.GObject):
-    def __init__(self, fileName = None):
+    def __init__(self, fileName = None, debug = False):
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_size_request(WINWIDTH, WINHEIGHT)
         self.window.set_title(WINDOWTITLE)
@@ -320,7 +330,7 @@ class KSEWindow(gobject.GObject):
         self.mainbox.show()
         self.window.add(self.mainbox)
         
-        self.activityView = KSEActivityView()
+        self.activityView = KSEActivityView(fileName)
         self.toolbar = KSEToolBar(self.activityView)
         
         self.mainbox.pack_start(self.toolbar, False, False, 2)
@@ -329,6 +339,7 @@ class KSEWindow(gobject.GObject):
         self.window.connect("delete_event", self.stop)
         self.window.maximize()
         self.window.show()
+        self._initLogging(debug)
 
     def start(self):
         gtk.main()
@@ -336,19 +347,34 @@ class KSEWindow(gobject.GObject):
     def stop(self, event, data = None):
         gtk.main_quit()
 
+    #INTERNAL
 
+    def _initLogging(self, debug):
+        self.logger = logging.getLogger("KRFEditor")
+        hdlr = logging.FileHandler('/var/tmp/KRFEditor.log')
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        hdlr.setFormatter(formatter)
+        self.logger.addHandler(hdlr)
+        hdlr.setLevel(logging.WARNING)
 
-def setup_command_line_options():
-  parser = OptionParser()
-  parser.add_option('-f', dest='filename', help='target xml file to view')
-  (options, args) = parser.parse_args()
-  return(options.filename)
+        if (debug):
+            shdlr = logging.StreamHandler()
+            self.logger.addHandler(shdlr)
+            shdlr.setLevel(logging.INFO)
+
+        self.logger.setLevel(logging.INFO)
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="A Kerious Resource File Editor")
+    parser.add_argument('-f', action = "store", dest = "fileName", help="specify a file to open")
+    parser.add_argument('-d', action = "store_true", default = False, help="Debug boolean")
+    return parser.parse_args()
 
 ###
 # FUNCTIONS
 ###
 
 if __name__ == "__main__":
-    fileName = setup_command_line_options()
-    kseWindow = KSEWindow(fileName)
+    args = parse_args()
+    kseWindow = KSEWindow(args.fileName, args.d)
     kseWindow.start()
