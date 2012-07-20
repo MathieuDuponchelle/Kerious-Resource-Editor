@@ -10,5 +10,9 @@ class Photoshop(gtk.Image):
 
     def displayImage(self, path):
         self.path = path
-        pixbuf = gtk.gdk.pixbuf_new_from_file(self.path)
+        try:
+            pixbuf = gtk.gdk.pixbuf_new_from_file(self.path)
+        except glib.GError:
+            ErrorMessage("Invalid path !")
+            return
         self.set_from_pixbuf(pixbuf)

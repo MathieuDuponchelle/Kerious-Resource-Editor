@@ -339,11 +339,6 @@ class KSEWindow(gobject.GObject):
 
 
 def setup_command_line_options():
-  '''                                                                                                                                                                                                                                        
-  using optparse                                                                                                                                                                                                                             
-  define command line arguments                                                                                                                                                                                                              
-  return target filename, None if none specified                                                                                                                                                                                             
-  '''
   parser = OptionParser()
   parser.add_option('-f', dest='filename', help='target xml file to view')
   (options, args) = parser.parse_args()
