@@ -274,6 +274,7 @@ class GraphicSection(Section):
 
 class KSEActivityView(gtk.Notebook):
     def __init__(self, fileName):
+        self.logger = logging.getLogger("KRFEditor")
         gtk.Notebook.__init__(self)
         self.show()
 
@@ -316,8 +317,18 @@ class KSEActivityView(gtk.Notebook):
         else:
             userOk = True
         if userOk:
-            self.xmlHandler = KrfParser(fileName)
-            self.graphics.createTree(self.xmlHandler)
+            try:
+                self.xmlHandler = KrfParser(fileName)
+            except IOError:
+                ErrorMessage("The file you're trying to open doesn't exist")
+                self.logger.error("User tried to open invalid path as a resource file : %s", fileName)
+                return
+            self.logger.info("User opened a file with filename : %s", fileName)
+            if self.xmlHandler.isValid():
+                self.graphics.createTree(self.xmlHandler)
+            else:
+                ErrorMessage("The file you opened is not a valid KRF. Begone !")
+                self.logger.error("User tried to open an invalid KRF : %s", fileName)
 
 class KSEWindow(gobject.GObject):
     def __init__(self, fileName = None, debug = False):
@@ -325,7 +336,8 @@ class KSEWindow(gobject.GObject):
         self.window.set_size_request(WINWIDTH, WINHEIGHT)
         self.window.set_title(WINDOWTITLE)
         self.window.set_border_width(BORDERWIDTH)
-        
+        self._initLogging(debug)
+ 
         self.mainbox = gtk.VBox(False, 0)
         self.mainbox.show()
         self.window.add(self.mainbox)
@@ -339,7 +351,6 @@ class KSEWindow(gobject.GObject):
         self.window.connect("delete_event", self.stop)
         self.window.maximize()
         self.window.show()
-        self._initLogging(debug)
 
     def start(self):
         gtk.main()
@@ -357,17 +368,25 @@ class KSEWindow(gobject.GObject):
         self.logger.addHandler(hdlr)
         hdlr.setLevel(logging.WARNING)
 
-        if (debug):
+        if debug:
             shdlr = logging.StreamHandler()
             self.logger.addHandler(shdlr)
-            shdlr.setLevel(logging.INFO)
-
+            if debug == "debug":
+                shdlr.setLevel(logging.DEBUG)
+            elif debug == "info":
+                shdlr.setLevel(logging.INFO)
+            elif debug == "warning":
+                shdlr.setLevel(logging.WARNING)
+            elif debug == "error":
+                shdlr.setLevel(logging.ERROR)
+            elif debug == "critical":
+                shdlr.setLevel(logging.CRITICAL)
         self.logger.setLevel(logging.INFO)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="A Kerious Resource File Editor")
     parser.add_argument('-f', action = "store", dest = "fileName", help="specify a file to open")
-    parser.add_argument('-d', action = "store_true", default = False, help="Debug boolean")
+    parser.add_argument('-d', action = "store", dest = "debug", help="Debug level on stderr")
     return parser.parse_args()
 
 ###
@@ -376,5 +395,5 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    kseWindow = KSEWindow(args.fileName, args.d)
+    kseWindow = KSEWindow(args.fileName, args.debug)
     kseWindow.start()
