@@ -3,26 +3,37 @@ import logging
 
 from sections import GraphicSection
 from krfparser import KrfParser
+from indent import indent
 
+#TODO : connect to "page changed" to change currentSection
 class KSEActivityView(gtk.Notebook):
-    def __init__(self, fileName, window):
+    """
+    Contained by : :class: `mainwindow`
+    :param fileName: optional string from the arguments.
+    :param instance: the :class: KSEWindow
+    """
+    def __init__(self, fileName, instance):
         self.logger = logging.getLogger("KRFEditor")
         gtk.Notebook.__init__(self)
         self.show()
 
         self.xmlHandler = None
 
-        self.graphics = GraphicSection(window)
+        self.app = instance
+        self.graphics = GraphicSection(self.app)
+        self.currentSection = self.graphics
 #        self.soundeffects = Section(SoundEffectsPanel())
 #        self.musics = Section(MusicPanel())
 
         self.append_page(self.graphics, gtk.Label("Graphics Section"))
 #        self.append_page(self.soundeffects, gtk.Label("Sound Effects Section"))
 #        self.append_page(self.musics, gtk.Label("Musics Section"))
-        if (fileName):
-            self.openFile(fileName)
-    
-    def closeFile(self):
+        if fileName:
+            self.openProject(fileName)
+        else:
+            self.newProject()
+
+    def closeFile(self, fileName = None):
         self.graphics.resetTree()
         self.soundeffects.resetTree()
         self.musics.resetTree()
@@ -42,7 +53,10 @@ class KSEActivityView(gtk.Notebook):
                             self.musics.createTree(soundSection)
         return ret
 
-    def openFile(self, fileName):
+    def newProject(self):
+        pass
+
+    def openProject(self, fileName):
         userOk = False
         if self.xmlHandler is not None:
             print "Should pop \"do you want to save?\""
@@ -61,3 +75,11 @@ class KSEActivityView(gtk.Notebook):
             else:
                 ErrorMessage("The file you opened is not a valid KRF. Begone !")
                 self.logger.error("User tried to open an invalid KRF : %s", fileName)
+
+    def saveProject(self, fileName):
+        node = self.xmlHandler.find("graphics")
+        indent(node)
+        self.xmlHandler.write(fileName)
+
+    def export(self):
+        self.currentSection.export()

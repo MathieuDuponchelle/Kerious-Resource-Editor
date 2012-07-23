@@ -1,7 +1,52 @@
 import gtk
 from utils import make_ui_path
 import logging
+from signallable import Signallable
+from loggable import Loggable
 import os
+
+class Atlas(Signallable, Loggable):
+    __signals__ = {
+    'sprite-added': ['sprite'],
+    'sprite-removed': ['sprite'],
+    }
+    def __init__(self, width, height):
+        """
+        An atlas is a collection of :class: sprites, organized inside it by
+        their coordinates and dimensions.
+        :param width: The rendered width of the atlas.
+        :param height: The rendered height of the atlas.
+        it to the atlas
+        """
+        self.width = width
+        self.height = height
+        self.xoffset = 0
+        self.yoffset = 0
+        self.maxOffset = 0
+        self.sprites = []
+
+    def addSprite(self, path, width, height, kar = True):
+        """
+        Will create and add a sprite to itself and its contained image, at the
+        current offset.
+        :param path: Path of the resource.
+        :param width: Desired width, might vary if kar is True
+        :param height: Desired height, might vary if kar is True
+        :param kar: boolean, whether to keep the aspect ratio when merging.
+        """
+        sprite = Sprite(path, width, height)
+        self.sprites.append(sprite)
+        self.emit("sprite-added", sprite)
+
+    def removeSprite(self, x, y):
+        """
+        Will remove the sprite matching the coordinates if existing.
+        :param x: X coordinate in the atlas.
+        :param y: Y coordinate in the atlas.
+        """
+        self.debug("Trying to remove inexistant sprite %r from atlas %r", sprite, self)
+        sprite = None
+        self.emit("sprite-removed", sprite)
 
 class AtlasCreator(gtk.Builder):
     def __init__(self, instance):
@@ -17,7 +62,7 @@ class AtlasCreator(gtk.Builder):
         self.get_object("assistant1").connect("delete-event", self._closeCb)
         self.get_object("assistant1").connect("cancel", self._closeCb)
         self.get_object("button1").connect("clicked", self._newFileChooserCb)
-        self.get_object("assistant1").set_transient_for(self.app.win)
+        self.get_object("assistant1").set_transient_for(self.app.app.window)
 
         self.height = 1024
         self.width = 1024

@@ -1,6 +1,8 @@
 import gtk
 
 from interface import Button
+from utils import get_name_from_uri
+from mediafilespreviewer import PreviewWidget
 
 IMAGE_ADD="assets/list-add.svg"
 IMAGE_NEW="assets/document-new.png"
@@ -9,12 +11,29 @@ IMAGE_SAVE="assets/document-save.png"
 IMAGE_SAVE_AS="assets/document-save-as.png"
 
 class KSEPanel(gtk.VBox):
+    """ 
+    Contained by Sections.
+    Panels are on the right-hand side of the UI. They allow addition and
+    deletion of resources in their respective sections (for example the
+    graphic panel allows adding atlases or resources to these atlases).
+    Content will obviously depend on the section.
+    """
     def __init__(self):
         gtk.VBox.__init__(self, False, 0)
         self.show()
         self.set_size_request(125, -1)
 
 class GraphicsPanel(KSEPanel):
+    """
+    This panel contains a treeview listing the image sources for the opened
+    project. The model of this treeview is a list of strings :
+    [0] -> Name of the resource.
+    [1] -> Path of the resource.
+    Width and height attributes describe the desired size of the next merge,
+    and can be modified from the UI.
+    """
+    #TODO : handle Aspect Ratio
+    #TODO : use gstreamer discoverer to display metadata about the files.
     def __init__(self, instance):
         KSEPanel.__init__(self)
         self.instance = instance
@@ -40,6 +59,13 @@ class GraphicsPanel(KSEPanel):
         self._addSpinButton("width : ", self._widthChangedCb)
         self._addSpinButton("height : ", self._heightChangedCb)
 
+    def loadProjectResources(self, node):
+        """
+        @param node: resources/graphics/resources xml Node
+        """
+        for elem in node.findall("resource"):
+            self.model.append([elem.attrib["name"], elem.attrib["path"]])
+
     #INTERNAL
 
     def _addSpinButton(self, text, function):
@@ -61,15 +87,22 @@ class GraphicsPanel(KSEPanel):
         self.height = spinner.get_value()
 
     def _addResourcesCb(self, unused):
+        uris = None
         chooser = gtk.FileChooserDialog(title = "Choose location", action = gtk.FILE_CHOOSER_ACTION_OPEN,
                                         buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                                    gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
         chooser.set_select_multiple(True)
+        pw = PreviewWidget(self.instance.app)
+        chooser.set_preview_widget(pw)
+        chooser.set_use_preview_label(False)
+        chooser.connect('update-preview', pw.add_preview_request)
         if chooser.run() == gtk.RESPONSE_ACCEPT:
-            self.uris = chooser.get_filenames()
+            uris = chooser.get_filenames()
         chooser.destroy()
-        for uri in self.uris:
-            self.model.append([get_name_from_uri(uri), uri])
+        if uris:
+            self.instance.addImagesToResources(uris)
+            for uri in uris:
+                self.model.append([get_name_from_uri(uri), uri])
 
 class SoundEffectsPanel(KSEPanel):
     def __init__(self):

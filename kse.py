@@ -1,5 +1,15 @@
 #!/usr/bin/env python
 
+"""
+.. module:: kse
+   :platform: Unix, Windows
+   :synopsis: A useful module indeed.
+
+.. moduleauthor:: Mathieu Duponchelle
+
+
+"""
+
 import sys
 import logging
 import sys

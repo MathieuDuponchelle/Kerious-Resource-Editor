@@ -1,0 +1,50 @@
+1. Description :
+
+KSE is an acronym which doesn't stand for anything. Like Haägens Dasz for
+instance.
+The K stands for Kerious, this at least I'm sure of.
+KSE produces xml files usable by video games.
+
+Insert obligatory diagram here (asciiflow).
+
+Use-cases :
+* User wants to create an atlas.
+* User wants to modify an atlas.
+* User wants to create an animation.
+* User wants to extract sounds from a sound file.
+* User wants to specify sound resources.
+
+2. Hacking :
+
+For the while we have smurf-naming convention all over the place, like :
+SmurfWindow contains SmurfWorkzone which has a method called Smurfsthg etc.
+Don't mind this convention at all, replace if possible.
+
+Really mandatory conventions:
+
+* camelCase.
+* Callbacks must be named _myNameCb.
+* Private methods must be named _myName.
+* Private methods and callbacks are located at the end of each classes, after
+  the #Internal comment.
+* All xml manipulations must be made when possible in the relevant Section
+  classes, this to keep at least partial sanity.
+* No god-objects or megamoths allowed.
+
+Making design docs to implement a new feature is never frowned upon,
+Example docs will be added.
+
+3. TODO :
+
+Implement saving.		Done
+Implement exporting.		Done
+Implement undo/redo.
+Remove smurf-naming.
+
+4. Useful links :
+
+https://docs.google.com/document/d/1AFRmyuRswPojl-Gg5R7aRLYFLSK1Xb6JluATX7geq_I/
+Ask for an invitation to simon.corsin@epitech.eu or
+mathieu.duponchelle@epitech.eu.
+
+Insert kerious engine link here.

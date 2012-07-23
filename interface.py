@@ -92,19 +92,22 @@ class FileMenu(BaseMenu):
     def __init__(self, buttonBox, activityView):
         BaseMenu.__init__(self, "File")
         self.addEntry("New", None)
-        self.addEntry("Open", self.openFileAction)
+        self.addEntry("Open", self._openProjectCb)
         self.addEntry("Save", None)
-        self.addEntry("Save As...", None)
+        self.addEntry("Save As...", self._saveProjectAsCb)
         self.addEntry("Quit", None)
+        self.addEntry("Export", self._exportCb)
         Button(pack=buttonBox, packType=Button.PACKSTART, imageLink=IMAGE_NEW)
-        Button(pack=buttonBox, packType=Button.PACKSTART, callBack=self.openFileAction, imageLink=IMAGE_OPEN)
+        Button(pack=buttonBox, packType=Button.PACKSTART, callBack=self._openProjectCb, imageLink=IMAGE_OPEN)
         Button(pack=buttonBox, packType=Button.PACKSTART, imageLink=IMAGE_SAVE)
         Button(pack=buttonBox, packType=Button.PACKSTART, imageLink=IMAGE_SAVE_AS)
         
         self.activityView = activityView
-        
-    def openFileAction(self, fileMenu):
-        chooser = gtk.FileChooserDialog(title="Choose your file", action=gtk.FILE_CHOOSER_ACTION_OPEN,
+
+    #INTERNAL
+
+    def _openProjectCb(self, fileMenu):
+        chooser = gtk.FileChooserDialog(title="Open project", action=gtk.FILE_CHOOSER_ACTION_OPEN,
                                         buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         filter = gtk.FileFilter()
         filter.add_pattern("*.krf")
@@ -112,9 +115,25 @@ class FileMenu(BaseMenu):
         chooser.add_filter(filter)
         response = chooser.run()
         if response == gtk.RESPONSE_OK:
-            self.activityView.openFile(chooser.get_filename())
+            self.activityView.openProject(chooser.get_filename())
         chooser.destroy()
-    
+
+    def _saveProjectAsCb(self, fileMenu):
+        chooser = gtk.FileChooserDialog(title="Save project", action=gtk.FILE_CHOOSER_ACTION_SAVE,
+                                        buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
+        filter = gtk.FileFilter()
+        filter.add_pattern("*.krf")
+        filter.set_name("Kerious Ressources File (*.ksf)")
+        chooser.add_filter(filter)
+        response = chooser.run()
+        if response == gtk.RESPONSE_ACCEPT:
+            self.activityView.saveProject(chooser.get_filename())
+            self.activityView.export()
+        chooser.destroy()
+
+    def _exportCb(self, fileMenu):
+        self.activityView.export()
+
 class SectionMenu(BaseMenu):
     def __init__(self):
         BaseMenu.__init__(self, "Sections")

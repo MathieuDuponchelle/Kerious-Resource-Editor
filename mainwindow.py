@@ -1,8 +1,10 @@
 import gtk
+import gst
 import logging
 
 from activity import KSEActivityView
 from interface import KSEToolBar
+from settings import GlobalSettings
 
 WINDOWTITLE="Kerious Ressources Editor"
 WINWIDTH=1024
@@ -16,12 +18,13 @@ class KSEWindow:
         self.window.set_title(WINDOWTITLE)
         self.window.set_border_width(BORDERWIDTH)
         self._initLogging(debug)
+        self.settings = GlobalSettings()
  
         self.mainbox = gtk.VBox(False, 0)
         self.mainbox.show()
         self.window.add(self.mainbox)
         
-        self.activityView = KSEActivityView(fileName, self.window)
+        self.activityView = KSEActivityView(fileName, self)
         self.toolbar = KSEToolBar(self.activityView)
         
         self.mainbox.pack_start(self.toolbar, False, False, 2)
