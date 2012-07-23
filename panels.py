@@ -43,28 +43,42 @@ class GraphicsPanel(KSEPanel):
         self.butAddResource = Button("Add resource image", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
         self.butAddAtlas.connect("clicked", self.instance.addAtlasCb)
         self.butAddResource.connect("clicked", self._addResourcesCb)
-        self.model = gtk.ListStore(str, str)
+        self.model = gtk.ListStore(str, gtk.gdk.Pixbuf, str)
         self.listview = gtk.TreeView()
         self.listview.set_model(self.model)
-        self.pack_start(self.listview, True, True, 0)
-        self.listview.show()
+        scrolledWindow = gtk.ScrolledWindow()
+        scrolledWindow.add_with_viewport(self.listview)
+        self.pack_start(scrolledWindow, True, True, 0)
         resources = gtk.TreeViewColumn("Resources")
         cell = gtk.CellRendererText()
         resources.pack_start(cell, True)
         resources.add_attribute(cell, "text", 0)
         self.listview.append_column(resources)
+
+        pixbufcol = gtk.TreeViewColumn("Icon")
+        pixbufcol.set_expand(False)
+        self.listview.append_column(pixbufcol)
+        pixcell = gtk.CellRendererPixbuf()
+        pixcell.props.xpad = 6
+        pixbufcol.pack_start(pixcell)
+        pixbufcol.add_attribute(pixcell, 'pixbuf', 1)
+
         self.listview.connect("row-activated", self.instance.rowActivatedCb, self.model)
         self.width = 32
         self.height = 32
         self._addSpinButton("width : ", self._widthChangedCb)
         self._addSpinButton("height : ", self._heightChangedCb)
 
+        self.show_all()
+
     def loadProjectResources(self, node):
         """
         @param node: resources/graphics/resources xml Node
         """
         for elem in node.findall("resource"):
-            self.model.append([elem.attrib["name"], elem.attrib["path"]])
+            pixbuf = gtk.gdk.pixbuf_new_from_file(elem.attrib["path"])
+            pixbuf = pixbuf.scale_simple(64, 64, gtk.gdk.INTERP_BILINEAR)
+            self.model.append([elem.attrib["name"], pixbuf, elem.attrib["path"]])
 
     #INTERNAL
 
@@ -92,17 +106,22 @@ class GraphicsPanel(KSEPanel):
                                         buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                                    gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
         chooser.set_select_multiple(True)
-        pw = PreviewWidget(self.instance.app)
-        chooser.set_preview_widget(pw)
-        chooser.set_use_preview_label(False)
-        chooser.connect('update-preview', pw.add_preview_request)
+        try:
+            pw = PreviewWidget(self.instance.app)
+            chooser.set_preview_widget(pw)
+            chooser.set_use_preview_label(False)
+            chooser.connect('update-preview', pw.add_preview_request)
+        except AttributeError:
+            print "We must set the pythonpath"
         if chooser.run() == gtk.RESPONSE_ACCEPT:
             uris = chooser.get_filenames()
         chooser.destroy()
         if uris:
             self.instance.addImagesToResources(uris)
             for uri in uris:
-                self.model.append([get_name_from_uri(uri), uri])
+                pixbuf = gtk.gdk.pixbuf_new_from_file(uri)
+                pixbuf = pixbuf.scale_simple(64, 64, gtk.gdk.INTERP_BILINEAR)
+                self.model.append([get_name_from_uri(uri), pixbuf, uri])
 
 class SoundEffectsPanel(KSEPanel):
     def __init__(self):

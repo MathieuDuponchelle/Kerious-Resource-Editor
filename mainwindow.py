@@ -5,6 +5,7 @@ import logging
 from activity import KSEActivityView
 from interface import KSEToolBar
 from settings import GlobalSettings
+from undo import UndoableActionLog
 
 WINDOWTITLE="Kerious Ressources Editor"
 WINWIDTH=1024
@@ -13,6 +14,7 @@ BORDERWIDTH=2
 
 class KSEWindow:
     def __init__(self, fileName = None, debug = False):
+        self.action_log = UndoableActionLog()
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_size_request(WINWIDTH, WINHEIGHT)
         self.window.set_title(WINDOWTITLE)

@@ -39,7 +39,7 @@ class GraphicSection(Section):
     def __init__(self, instance):
         self.app = instance
         self.graphics = GraphicsPanel(self)
-        Section.__init__(self, self.graphics, KSEGraphicWorkzone())
+        Section.__init__(self, self.graphics, KSEGraphicWorkzone(self.app))
 
     def createTree(self, tree):
         self.tree = tree.find("graphics")
@@ -77,15 +77,8 @@ class GraphicSection(Section):
 
     # Hackish, connected to the graphics panel's treeview.
     def rowActivatedCb(self, treeview, path, column, model):
-        coords = self.workzone.mergeResource(self.graphics.width,
-                                             self.graphics.height,
-                                             model[path][1])
-        if coords:
-            newNode = Element("sprite", attrib = {"name" : model[path][0],
-                                                  "path" : model[path][1],
-                                                  "texturex" : str(coords["x"]),
-                                                  "texturey" : str(coords["y"]),
-                                                  "texturew" : str(coords["width"]),
-                                                  "textureh" : str(coords["height"])})
-            coords["xmlNode"].append(newNode)
-            self.workzone.addSpriteForAtlas(coords["xmlNode"], newNode)
+        self.app.action_log.begin("add sprite")
+        self.workzone.mergeResource(self.graphics.width,
+                                    self.graphics.height,
+                                    model[path][2])
+        self.app.action_log.commit()

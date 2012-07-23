@@ -6,6 +6,8 @@ IMAGE_OPEN="assets/document-open.png"
 IMAGE_SAVE="assets/document-save.png"
 IMAGE_SAVE_AS="assets/document-save-as.png"
 
+from undo import UndoWrongStateError
+
 class Button(gtk.Button):
     FILL = 0
     PACKSTART = 1
@@ -97,6 +99,20 @@ class FileMenu(BaseMenu):
         self.addEntry("Save As...", self._saveProjectAsCb)
         self.addEntry("Quit", None)
         self.addEntry("Export", self._exportCb)
+        image = gtk.Image()
+        image.set_from_stock(gtk.STOCK_UNDO, gtk.ICON_SIZE_BUTTON)
+        button = gtk.Button()
+        button.set_image(image)
+        buttonBox.pack_start(button, False, False, 0)
+        button.show()
+        button.connect("clicked", self._undoCb)
+        button = gtk.Button()
+        image = gtk.Image()
+        image.set_from_stock(gtk.STOCK_REDO, gtk.ICON_SIZE_BUTTON)
+        button.set_image(image)
+        buttonBox.pack_start(button, False, False, 0)
+        button.show()
+        button.connect("clicked", self._redoCb)
         Button(pack=buttonBox, packType=Button.PACKSTART, imageLink=IMAGE_NEW)
         Button(pack=buttonBox, packType=Button.PACKSTART, callBack=self._openProjectCb, imageLink=IMAGE_OPEN)
         Button(pack=buttonBox, packType=Button.PACKSTART, imageLink=IMAGE_SAVE)
@@ -105,6 +121,20 @@ class FileMenu(BaseMenu):
         self.activityView = activityView
 
     #INTERNAL
+
+    def _undoCb(self, button):
+        try:
+            self.activityView.app.action_log.undo()
+        except UndoWrongStateError:
+            #FIXME : make button insensitive
+            print "Nothing to undo anymore"
+
+    def _redoCb(self, button):
+        try:
+            self.activityView.app.action_log.redo()
+        except UndoWrongStateError:
+            #FIXME : make button insensitive
+            print "Nothing to redo anymore"
 
     def _openProjectCb(self, fileMenu):
         chooser = gtk.FileChooserDialog(title="Open project", action=gtk.FILE_CHOOSER_ACTION_OPEN,

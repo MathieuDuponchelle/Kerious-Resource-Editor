@@ -1,53 +1,120 @@
 import gtk
-from utils import make_ui_path
 import logging
+import os
+from xml.etree.ElementTree import Element
+
+from utils import make_ui_path
 from signallable import Signallable
 from loggable import Loggable
-import os
+from sprite import Sprite
 
 class Atlas(Signallable, Loggable):
     __signals__ = {
     'sprite-added': ['sprite'],
-    'sprite-removed': ['sprite'],
+    'sprite-removed': ['sprite']
     }
-    def __init__(self):
+    def __init__(self, factory):
         """
         An atlas is a collection of :class: sprites, organized inside it by
         their coordinates and dimensions.
         it to the atlas
         """
+        self.drawable = None
         self.width = 0
         self.height = 0
         self.xoffset = 0
         self.yoffset = 0
         self.maxOffset = 0
+        self.xmlNode = None
         self.sprites = []
+        self.factory = factory
 
-    def loadImage(self):
-        pass
+    def setDrawable(self, drawable):
+        self.drawable = drawable
 
-    def addSprite(self, path, width, height, kar = True):
+    def setXmlNode(self, node):
+        self.xmlNode = node
+
+    def addSprite(self, src, path):
         """
-        Will create and add a sprite to itself and its contained image, at the
-        current offset.
+        :param src: image to merge
         :param path: Path of the resource.
-        :param width: Desired width, might vary if kar is True
-        :param height: Desired height, might vary if kar is True
-        :param kar: boolean, whether to keep the aspect ratio when merging.
         """
-        sprite = Sprite(path, width, height)
+        dest = self.drawable.image
+        coords = {}
+        if self.xoffset + src.size[0] > dest.size[0]:
+            self.xoffset = 0
+            self.yoffset += atlas.maxOffset
+            self.maxOffset = 0
+        if self.yoffset > dest.size[1]:
+            self.logger.warning("Space in Pixbuf exceeded, NOT ADDING : %s", path)
+            return None
+        coords["x"] = self.xoffset
+        coords["y"] = self.yoffset
+        coords["width"] = src.size[0]
+        coords["height"] = src.size[1]
+        sprite = Sprite(path, self.xoffset, self.yoffset, src.size[0], src.size[1])
+        dest.paste(src, (self.xoffset, self.yoffset))
+        self.xoffset += src.size[0]
+        if src.size[1] > self.maxOffset:
+            self.maxOffset = src.size[1]
+        self._updateXmlNode(sprite)
+        #self.logger.debug("Space in pixbuf OK, ADDING : %s", path)
         self.sprites.append(sprite)
         self.emit("sprite-added", sprite)
+        return coords
+        #sprite = Sprite(path, width, height)
 
-    def removeSprite(self, x, y):
+    def removeSprite(self, sprite):
         """
         Will remove the sprite matching the coordinates if existing.
         :param x: X coordinate in the atlas.
         :param y: Y coordinate in the atlas.
         """
-        self.debug("Trying to remove inexistant sprite %r from atlas %r", sprite, self)
-        sprite = None
+        print sprite.texturex, sprite.texturey, sprite.textureh, sprite.texturew
+        try:
+            self.sprites.remove(sprite)
+        except ValueError:
+            print "investigate"
+        for elem in self.xmlNode.findall("sprite"):
+            if elem.attrib["path"] == sprite.path and\
+                    elem.attrib["texturex"] == sprite.texturex and \
+                    elem.attrib["texturey"] == sprite.texturey:
+                self.xmlNode.remove(elem)
+        image = self.factory.makeNewDrawable(sprite.texturew, sprite.texturew)
+        self.drawable.image.paste(image.image, (sprite.texturex, sprite.texturey))
+        self.xoffset = self.xoffset - sprite.texturew
+        if self.xoffset < 0:
+            self.xoffset = 0
+        self.xmlNode.attrib["xoffset"] = str(self.xoffset)
         self.emit("sprite-removed", sprite)
+
+    def readdSprite(self, sprite):
+        print sprite.texturew, sprite.textureh
+        drawable = self.factory.makeDrawableFromPath(sprite.path, sprite.texturew, sprite.textureh)
+        self.addSprite(drawable.image, sprite.path)
+        
+
+    def loadSprites(self, node):
+        for elem in node.findall("sprite"):
+            sprite = Sprite(elem.attrib["path"], elem.attrib["texturex"],
+                            elem.attrib["texturey"], elem.attrib["texturew"],
+                            elem.attrib["textureh"])
+            self.sprites.append(sprite)
+            
+
+    def _updateXmlNode(self, sprite):
+        self.xmlNode.attrib["xoffset"] = str(self.xoffset)
+        self.xmlNode.attrib["yoffset"] = str(self.yoffset)
+        self.xmlNode.attrib["maxoffset"] = str(self.maxOffset)
+        newNode = Element("sprite", attrib = {"name" : "",
+                                              "path" : str(sprite.path),
+                                              "texturex" : str(sprite.texturex),
+                                              "texturey" : str(sprite.texturey),
+                                              "texturew" : str(sprite.texturew),
+                                              "textureh" : str(sprite.textureh)})
+        self.xmlNode.append(newNode)
+        sprite.xmlNode = newNode
 
 class AtlasCreator(gtk.Builder):
     def __init__(self, instance):

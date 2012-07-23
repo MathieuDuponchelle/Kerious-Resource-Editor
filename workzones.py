@@ -33,17 +33,22 @@ class KSEWorkzone(gtk.VPaned):
     """
     def __init__(self):
         gtk.VPaned.__init__(self)
+        scrolledWindow = gtk.ScrolledWindow()
         self.treeview = KSETree()
+        scrolledWindow.add_with_viewport(self.treeview)
+        scrolledWindow.set_size_request(-1, 200)
+        scrolledWindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.notebook = KSEStatusView(self)
-        self.add1(self.treeview)
+        self.add1(scrolledWindow)
         self.add2(self.notebook)
-        self.show()
+        self.show_all()
 
     def export(self):
         pass
 
 class KSEGraphicWorkzone(KSEWorkzone):
-    def __init__(self):
+    def __init__(self, instance):
+        self.app = instance
         KSEWorkzone.__init__(self)
         self.sectionCallbacks = [self._getAtlasFromPath]
         self.current = None
@@ -64,8 +69,7 @@ class KSEGraphicWorkzone(KSEWorkzone):
         self.model.append(atlas, [node.attrib["name"]])
 
     def export(self):
-        atlas = self._getAtlasFromPath(self.current[1])
-        self.notebook.export(atlas.attrib["path"])
+        self.notebook.export()
 
     def getSpriteFromXY(self, event):
         atlas = self._getAtlasFromPath(self.current[1])
@@ -90,6 +94,9 @@ class KSEGraphicWorkzone(KSEWorkzone):
             except KeyError:
                 pass
 
+    def mergeResource(self, width, height, path):
+        self.notebook.mergeResource(width, height, path)
+
     #INTERNAL
 
     def _addAtlases(self):
@@ -103,7 +110,11 @@ class KSEGraphicWorkzone(KSEWorkzone):
             at = self.model.append(it, [elem.attrib["name"]])
             sprites = elem.findall("sprite")
             for el in sprites:
-                self.model.append(at, [el.attrib["name"]])
+                try:
+                    self.model.append(at, [el.attrib["path"]])
+                except KeyError:
+                    #TODO : better
+                    pass
         self.treeview.append_column(atlases)
 
     def _getAtlasFromPath(self, path):
@@ -122,6 +133,6 @@ class KSEGraphicWorkzone(KSEWorkzone):
         node = self.sectionCallbacks[path[0]](path[1])
         self._loadAtlasFromXml(node, path)
 
-    def mergeResource(self, width, height, path):
-        coords = self.notebook.mergeResource(width, height, path)
-        return coords
+    def _spriteAddedCb(self, atlas, sprite):
+        atlas = self.model.get_iter(self.current)
+        self.model.append(atlas, [sprite.path])

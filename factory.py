@@ -14,9 +14,9 @@ class Drawable:
         drawable = Drawable()
         drawable.image = self.image.copy()
         if kar:
-            drawable.image.thumbnail((width, height), Image.ANTIALIAS)
+            drawable.image.thumbnail((int(width), int(height)), Image.ANTIALIAS)
         else:
-            drawable.image = drawable.image.resize((width, height), Image.ANTIALIAS)
+            drawable.image = drawable.image.resize((int(width), int(height)), Image.ANTIALIAS)
         drawable.width = width
         drawable.height = height
         drawable.kar = kar
@@ -27,7 +27,6 @@ class Drawable:
         self.image = Image.new('RGBA', (int(width), int(height)))
 
     def copy(self):
-        print "returning a copy"
         drawable = Drawable()
         drawable.width = self.width
         drawable.height = self.height
@@ -69,7 +68,7 @@ class DrawableFactory:
             self.drawables[path] = []
         self.drawables[path].append(drawable)
         if width and height:
-            drawable = drawable.resize(width ,height, kar)
+            drawable = drawable.resize(width, height, kar)
             self.drawables[path].append(drawable)
         return drawable
 

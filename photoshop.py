@@ -21,51 +21,8 @@ class Photoshop(gtk.Image):
     """
     def __init__(self):
         gtk.Image.__init__(self)
-        self.xoffset = 0
-        self.yoffset = 0
-        self.maxOffset = 0
-        self.images = {}
         self.logger = logging.getLogger("KRFEditor")
-
-    def createEmptyImage(self, width, height, path):
-        self.PILImage = Image.new('RGBA', (int(width), int(height)))
-        self.images[path] = self.PILImage
-        return self.images[path]
 
     def displayImage(self, drawable):
         pixbuf = Image_to_GdkPixbuf(drawable)
         self.set_from_pixbuf(pixbuf)
-
-    def mergeImage(self, merged, width, height, path):
-        image = self.images[path]
-        im = image.copy()
-        size = width, height
-        im.thumbnail(size, Image.ANTIALIAS)
-        coords = {}
-        if self.xoffset + width > merged.size[0]:
-            self.xoffset = 0
-            self.yoffset += self.maxOffset
-            self.maxOffset = 0
-        if self.yoffset > merged.size[1]:
-            self.logger.warning("Space in Pixbuf exceeded, NOT ADDING : %s", path)
-            return None
-        coords["x"] = self.xoffset
-        coords["y"] = self.yoffset
-        coords["width"] = im.size[0]
-        coords["height"] = im.size[1]
-        coords["path"] = path
-        merged.paste(im, (self.xoffset, self.yoffset))
-        self.xoffset += im.size[0]
-        if im.size[1] > self.maxOffset:
-            self.maxOffset = im.size[1]
-        coords["xoff"] = self.xoffset
-        coords["yoff"] = self.yoffset
-        coords["maxoff"] = self.maxOffset
-        self.logger.debug("Space in pixbuf OK, ADDING : %s", path)
-        return coords
-
-    def export(self, path, image):
-        """
-        :param path: path of the image to export
-        """
-        image.save(path)
