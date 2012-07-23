@@ -2,6 +2,8 @@ import gtk
 import logging
 
 from photoshop import Photoshop
+from atlas import Atlas
+from factory import DrawableFactory
 
 #TODO : subclass this ...
 class KSEStatusView(gtk.Notebook):
@@ -14,6 +16,7 @@ class KSEStatusView(gtk.Notebook):
     """
     def __init__(self, instance):
         gtk.Notebook.__init__(self)
+        self.factory = DrawableFactory()
         self.workzone = instance
         self.logger = logging.getLogger("KRFEditor")
         self.photoshop = Photoshop()
@@ -28,12 +31,12 @@ class KSEStatusView(gtk.Notebook):
         self.current = ()
         self.eventBox.connect("button-release-event", self._keyReleasedCb)
 
-    def openPath(self, node, filePath):
+    def loadAtlasFromXml(self, node, filePath):
+        atlas = Atlas()
         try:
-            current = self.photoshop.loadImage(filePath)
-            self.logger.info("Image loaded")
-            self.current = (node, current)
-            self.photoshop.displayImage(self.current[1])
+            drawable = self.factory.makeDrawableFromPath(filePath)
+            self.current = (node, drawable)
+            self.photoshop.displayImage(self.current[1].image)
             self.logger.info("User opened an atlas : %s", filePath)
         except:
             self.logger.info("Inexistant path submitted to photoshop loading : %s", filePath)

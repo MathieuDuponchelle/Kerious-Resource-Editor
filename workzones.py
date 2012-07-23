@@ -109,15 +109,18 @@ class KSEGraphicWorkzone(KSEWorkzone):
     def _getAtlasFromPath(self, path):
         return self.atlases[path]
 
-    def _newSelectionCb(self, treeview, path, view_column):
-        node = self.sectionCallbacks[path[0]](path[1])
+    def _loadAtlasFromXml(self, node, path):
         self.current = path
         filePath = None
         try:
             filePath = node.attrib["path"]
-            self.notebook.openPath(node, filePath)
+            self.notebook.loadAtlasFromXml(node, filePath)
         except KeyError:
             ErrorMessage("No Path for this node :/")
+
+    def _newSelectionCb(self, treeview, path, view_column):
+        node = self.sectionCallbacks[path[0]](path[1])
+        self._loadAtlasFromXml(node, path)
 
     def mergeResource(self, width, height, path):
         coords = self.notebook.mergeResource(width, height, path)

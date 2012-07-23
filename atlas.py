@@ -10,20 +10,21 @@ class Atlas(Signallable, Loggable):
     'sprite-added': ['sprite'],
     'sprite-removed': ['sprite'],
     }
-    def __init__(self, width, height):
+    def __init__(self):
         """
         An atlas is a collection of :class: sprites, organized inside it by
         their coordinates and dimensions.
-        :param width: The rendered width of the atlas.
-        :param height: The rendered height of the atlas.
         it to the atlas
         """
-        self.width = width
-        self.height = height
+        self.width = 0
+        self.height = 0
         self.xoffset = 0
         self.yoffset = 0
         self.maxOffset = 0
         self.sprites = []
+
+    def loadImage(self):
+        pass
 
     def addSprite(self, path, width, height, kar = True):
         """

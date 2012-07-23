@@ -32,19 +32,8 @@ class Photoshop(gtk.Image):
         self.images[path] = self.PILImage
         return self.images[path]
 
-    def loadImage(self, path):
-        try:
-            self.images[path]
-            return self.images[path]
-        except KeyError:
-            pass
-        self.path = path
-        image = Image.open(path)
-        self.images[path] = image
-        return self.images[path]
-
-    def displayImage(self, image):
-        pixbuf = Image_to_GdkPixbuf(image)
+    def displayImage(self, drawable):
+        pixbuf = Image_to_GdkPixbuf(drawable)
         self.set_from_pixbuf(pixbuf)
 
     def mergeImage(self, merged, width, height, path):
