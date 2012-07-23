@@ -3,7 +3,7 @@ import logging
 import os
 from xml.etree.ElementTree import Element
 
-from utils import make_ui_path
+from utils import make_ui_path, is_contained_by
 from signallable import Signallable
 from loggable import Loggable
 from sprite import Sprite
@@ -115,6 +115,24 @@ class Atlas(Signallable, Loggable):
                                               "textureh" : str(sprite.textureh)})
         self.xmlNode.append(newNode)
         sprite.xmlNode = newNode
+
+    def getSpriteForXY(self, event):
+
+        x = event.get_coords()[0]
+        y = event.get_coords()[1]
+        #FIXME : hack, accounting for the possible margin between the
+        # event box bounds and the atlas bounds. I'm ashamed
+        for sprite in self.sprites:
+            try:
+                if is_contained_by(x, y,
+                                   sprite.texturex,
+                                   sprite.texturey,
+                                   sprite.texturew,
+                                   sprite.textureh):
+                    return sprite
+            except KeyError:
+                pass
+
 
 class AtlasCreator(gtk.Builder):
     def __init__(self, instance):

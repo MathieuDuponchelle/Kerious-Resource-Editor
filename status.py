@@ -98,7 +98,8 @@ class KSEStatusView(gtk.Notebook):
         self.currentAtlas.maxOffset = int(maxoff)
 
     def _keyReleasedCb(self, widget, event):
-        self.workzone.getSpriteFromXY(event)
+        sprite = self.currentAtlas.getSpriteForXY(event)
+        self.photoshop.highlight(sprite)
 
     def _atlasChangedCb(self, atlas, sprite):
         self.photoshop.displayImage(atlas.drawable.image)
