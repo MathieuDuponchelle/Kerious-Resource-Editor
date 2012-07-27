@@ -44,7 +44,7 @@ class Atlas(Signallable, Loggable):
         coords = {}
         if self.xoffset + src.size[0] > dest.size[0]:
             self.xoffset = 0
-            self.yoffset += atlas.maxOffset
+            self.yoffset += self.maxOffset
             self.maxOffset = 0
         if self.yoffset > dest.size[1]:
             self.logger.warning("Space in Pixbuf exceeded, NOT ADDING : %s", path)
@@ -78,8 +78,8 @@ class Atlas(Signallable, Loggable):
             print "investigate"
         for elem in self.xmlNode.findall("sprite"):
             if elem.attrib["path"] == sprite.path and\
-                    elem.attrib["texturex"] == sprite.texturex and \
-                    elem.attrib["texturey"] == sprite.texturey:
+                    elem.attrib["texturex"] == str(sprite.texturex) and \
+                    elem.attrib["texturey"] == str(sprite.texturey):
                 self.xmlNode.remove(elem)
         image = self.factory.makeNewDrawable(sprite.texturew, sprite.texturew)
         self.drawable.image.paste(image.image, (sprite.texturex, sprite.texturey))
@@ -101,7 +101,47 @@ class Atlas(Signallable, Loggable):
                             elem.attrib["texturey"], elem.attrib["texturew"],
                             elem.attrib["textureh"])
             self.sprites.append(sprite)
+            sprite.xmlNode = elem
+            self.emit("sprite-added", sprite)
             
+    def referenceSprite(self, coordinates):
+        #TODO : Manage Xml
+        sprite = Sprite("NoResource", coordinates[2],
+                        coordinates[3], coordinates[0],
+                        coordinates[1])
+        self.sprites.append(sprite)
+        #self.emit("sprite-referenced", sprite)
+
+    def extendSprites(self, size, alignment):
+        print "alligning", alignment
+        for sprite in self.sprites:
+            vdiff = size - (sprite.texturew % size)
+            hdiff = size - (sprite.textureh % size)
+            sprite.texturex -= vdiff / 2
+            sprite.texturew += vdiff
+            if alignment == 0: #BASELINE
+                sprite.texturey -= hdiff
+                sprite.textureh += hdiff
+            elif alignment == 1: #CENTERED
+                sprite.texturey -= hdiff / 2
+                sprite.textureh += hdiff
+            elif alignment == 2: #TOP
+                sprite.textureh += hdiff
+            
+
+    def getSpriteForXY(self, x, y):
+        #FIXME : hack, accounting for the possible margin between the
+        # event box bounds and the atlas bounds. I'm ashamed
+        for sprite in self.sprites:
+            try:
+                if is_contained_by(x, y,
+                                   sprite.texturex,
+                                   sprite.texturey,
+                                   sprite.texturew,
+                                   sprite.textureh):
+                    return sprite
+            except KeyError:
+                pass
 
     def _updateXmlNode(self, sprite):
         self.xmlNode.attrib["xoffset"] = str(self.xoffset)
@@ -116,22 +156,7 @@ class Atlas(Signallable, Loggable):
         self.xmlNode.append(newNode)
         sprite.xmlNode = newNode
 
-    def getSpriteForXY(self, event):
 
-        x = event.get_coords()[0]
-        y = event.get_coords()[1]
-        #FIXME : hack, accounting for the possible margin between the
-        # event box bounds and the atlas bounds. I'm ashamed
-        for sprite in self.sprites:
-            try:
-                if is_contained_by(x, y,
-                                   sprite.texturex,
-                                   sprite.texturey,
-                                   sprite.texturew,
-                                   sprite.textureh):
-                    return sprite
-            except KeyError:
-                pass
 
 
 class AtlasCreator(gtk.Builder):
@@ -170,10 +195,10 @@ class AtlasCreator(gtk.Builder):
     # INTERNAL
 
     def _widthChangedCb(self, spinner):
-        self.width = spinner.get_value()
+        self.width = int(spinner.get_value())
 
     def _heightChangedCb(self, spinner):
-        self.height = spinner.get_value()
+        self.height = int(spinner.get_value())
 
     def _newFileChooserCb(self, button):
         chooser = gtk.FileChooserDialog(title = "Choose location", action = gtk.FILE_CHOOSER_ACTION_SAVE,

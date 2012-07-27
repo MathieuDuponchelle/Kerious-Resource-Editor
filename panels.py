@@ -38,11 +38,11 @@ class GraphicsPanel(KSEPanel):
         KSEPanel.__init__(self)
         self.instance = instance
         self.butAddAtlas = Button("Add atlas", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
-        self.butAddState = Button("Add state", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
         self.butAddAnimation = Button("Add animation", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
         self.butAddResource = Button("Add resource image", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
         self.butAddAtlas.connect("clicked", self.instance.addAtlasCb)
         self.butAddResource.connect("clicked", self._addResourcesCb)
+
         self.model = gtk.ListStore(str, gtk.gdk.Pixbuf, str)
         self.listview = gtk.TreeView()
         self.listview.set_model(self.model)

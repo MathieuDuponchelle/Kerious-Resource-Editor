@@ -209,11 +209,13 @@ class NumericWidget(gtk.HBox, DynamicWidget):
         if lower is None:
             lower = gobject.G_MINDOUBLE
         range = upper - lower
-        self.adjustment.props.lower = lower
-        self.adjustment.props.upper = upper
-        self.spinner = gtk.SpinButton(self.adjustment)
+        self.spinner = gtk.SpinButton(self.adjustment, climb_rate = 1.0)
         self.pack_end(self.spinner, expand=not hasattr(self, 'slider'))
         self.spinner.show()
+        self.adjustment.props.lower = lower
+        self.adjustment.props.upper = upper
+        if default != None:
+            self.adjustment.set_value(float(default))
 
     def connectValueChanged(self, callback, *args):
         self.adjustment.connect("value-changed", callback, *args)

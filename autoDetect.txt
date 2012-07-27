@@ -1,0 +1,28 @@
+Description of the smartDetector feature and of its different options.
+
+The implementation of this feature is a complete hack. Look at the code
+at your own risks, wear sunglasses. You'll be warned.
+
+First off, the idea is to pick pixels at definite intervals, that can
+be specified. If you pick a value of 10, the algorithm will look at
+0, 0 then 0, 10 [...], then 10, 10, then 10,20 you get the idea.
+Obviously, the smaller the value, the better the result, but also the
+longer the processing. The default value of 10 is a good trade-off,
+but when dealing with tiny sprites it will need to be tuned down.
+
+The second point is the color of the background. To extract silhouettes,
+ImageMagick will check the neighbouring pixels until they match with
+the background. Doing so will allow the algorithm to detect edges, but
+when the studied pixel happens to still be part of the silhouette AND
+to have the same color as the background, the algorithm will fail in
+various entertaining but still faulty ways.
+
+TL;DR : modify your image in place to make it have a background color
+different from edges in your sprites, specify this new background color
+in the options, run the detector, save the results, then change your 
+image again. If necessary, an explanatory video will be recorded.
+
+Last thing : You certainly will want your sprites to have sizes
+multiple of something, for example 8. This is what the match-size
+option will allow you to do, along with the possibility of having
+these sprites centered, or aligned on a base line.

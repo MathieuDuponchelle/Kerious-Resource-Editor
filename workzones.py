@@ -35,9 +35,9 @@ class KSEWorkzone(gtk.VPaned):
         gtk.VPaned.__init__(self)
         scrolledWindow = gtk.ScrolledWindow()
         self.treeview = KSETree()
-        scrolledWindow.add_with_viewport(self.treeview)
+        scrolledWindow.add(self.treeview)
         scrolledWindow.set_size_request(-1, 200)
-        scrolledWindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        #scrolledWindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.notebook = KSEStatusView(self)
         self.add1(scrolledWindow)
         self.add2(self.notebook)
@@ -71,29 +71,6 @@ class KSEGraphicWorkzone(KSEWorkzone):
     def export(self):
         self.notebook.export()
 
-    def getSpriteFromXY(self, event):
-        atlas = self._getAtlasFromPath(self.current[1])
-        sprites = atlas.findall("sprite")
-        x = event.get_coords()[0]
-        y = event.get_coords()[1]
-        #FIXME : hack, accounting for the possible margin between the
-        # event box bounds and the atlas bounds. I'm ashamed
-        diff = self.notebook.get_allocation().width - int(self._getAtlasFromPath(self.current[1]).attrib["width"])
-        if diff > 0:
-            x -= diff / 2
-        for sprite in sprites:
-            try:
-                print x, y
-                print int(sprite.attrib["texturex"]), int(sprite.attrib["texturey"]), int(sprite.attrib["texturew"]), int(sprite.attrib["textureh"])
-                if is_contained_by(x, y,
-                                   int(sprite.attrib["texturex"]),
-                                   int(sprite.attrib["texturey"]),
-                                   int(sprite.attrib["texturew"]),
-                                   int(sprite.attrib["textureh"])):
-                    print sprite.attrib["name"], " was clicked"
-            except KeyError:
-                pass
-
     def mergeResource(self, width, height, path):
         self.notebook.mergeResource(width, height, path)
 
@@ -109,12 +86,6 @@ class KSEGraphicWorkzone(KSEWorkzone):
         for elem in self.atlases:
             at = self.model.append(it, [elem.attrib["name"]])
             sprites = elem.findall("sprite")
-            for el in sprites:
-                try:
-                    self.model.append(at, [el.attrib["path"]])
-                except KeyError:
-                    #TODO : better
-                    pass
         self.treeview.append_column(atlases)
 
     def _getAtlasFromPath(self, path):
@@ -135,4 +106,8 @@ class KSEGraphicWorkzone(KSEWorkzone):
 
     def _spriteAddedCb(self, atlas, sprite):
         atlas = self.model.get_iter(self.current)
-        self.model.append(atlas, [sprite.path])
+        sprite.iter = self.model.append(atlas, [sprite.path])
+
+    def _spriteRemovedCb(self, atlas, sprite):
+        atlas = self.model.get_iter(self.current)
+        self.model.remove(sprite.iter)

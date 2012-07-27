@@ -27,8 +27,15 @@ class KSEWindow:
         self.window.add(self.mainbox)
         
         self.activityView = KSEActivityView(fileName, self)
-        self.toolbar = KSEToolBar(self.activityView)
-        
+        accelGroup = gtk.AccelGroup()
+        self.window.add_accel_group(accelGroup)
+        self.toolbar = KSEToolBar(self.activityView, accelGroup)
+
+        actionGroup = gtk.ActionGroup("Main window actions")
+        actionGroup.add_actions([("MainWindow", None, "Save Project",
+                                         "<control>s", "Saves the project",
+                                         self._saveProjectCb)])
+
         self.mainbox.pack_start(self.toolbar, False, False, 2)
         self.mainbox.pack_start(self.activityView, True, True, 0)
 
@@ -66,3 +73,6 @@ class KSEWindow:
             elif debug == "critical":
                 shdlr.setLevel(logging.CRITICAL)
         self.logger.setLevel(logging.INFO)
+
+    def _saveProjectCb(self, widget):
+        print "saved"

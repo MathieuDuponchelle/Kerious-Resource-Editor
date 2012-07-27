@@ -15,37 +15,127 @@ def Image_to_GdkPixbuf (image):
     loader.close ()
     return pixbuf
 
-class Photoshop(gtk.DrawingArea):
+class Photoshop(gtk.ScrolledWindow):
     """
     Contained by : KSEStatusView
     """
     def __init__(self):
-        gtk.DrawingArea.__init__(self)
+        gtk.ScrolledWindow.__init__(self)
         self.logger = logging.getLogger("KRFEditor")
-        self.connect("expose-event", self._exposeEventCb)
+
+        self.table = gtk.Table()
+        self.add_with_viewport(self.table)
+        eventBox = gtk.EventBox()
+        self.drawingArea = gtk.DrawingArea()
+        self.drawingArea.connect("expose-event", self._exposeEventCb)
+        self.drawingArea.set_flags(gtk.CAN_FOCUS)
+        eventBox.add(self.drawingArea)
+        self.table.attach(eventBox, 1, 2, 1, 2, gtk.FILL, gtk.FILL)
+
+        eventBox.connect("key-press-event", self._keyPressedCb)
+
+        self.hruler = gtk.HRuler()
+        self.vruler = gtk.VRuler()
+        self.table.attach(self.hruler, 1, 2, 0, 1, gtk.EXPAND | gtk.FILL, gtk.FILL)
+        self.table.attach(self.vruler, 0, 1, 1, 2, gtk.FILL, gtk.EXPAND | gtk.FILL)
+
+        self.drawingArea.connect_object("motion-notify-event", self._motionNotifyCb, self.hruler)
+        self.drawingArea.connect_object("motion-notify-event", self._motionNotifyCb, self.vruler)
+
         self.pixbuf = None
         self.gc = None
+        self.highlightedSprite = None
+        self.zoomRatio = 1.0
 
-    def displayImage(self, drawable):        
-        self.set_size_request(drawable.size[0], drawable.size[1])
+        self.show_all()
+
+    def displayImage(self, drawable):
+        self.drawingArea.set_size_request(drawable.size[0], drawable.size[1])
         pixbuf = Image_to_GdkPixbuf(drawable)
         self.pixbuf = pixbuf
-        self.window.draw_pixbuf(None, pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
+        self.originalPixbuf = self.pixbuf
+        self.drawable = drawable
+        self._drawImage()
 
     def highlight(self, sprite):
         self.gc.set_foreground(self.color)
-        self.gc.set_background(self.color)
-        self.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
-        self.window.draw_rectangle(self.gc, False, sprite.texturex, sprite.texturey, sprite.texturew, sprite.textureh)
+        self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
+        self.highlightedSprite = sprite
+        if sprite != None:
+            self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
+                                                   int(sprite.texturey * self.zoomRatio),
+                                                   int(sprite.texturew * self.zoomRatio),
+                                                   int(sprite.textureh * self.zoomRatio))
+        color = self.gc.get_colormap().alloc('black')
+        self.gc.set_foreground(color)
+
+    def highlightAll(self, atlas):
+        self.gc.set_foreground(self.color)
+        self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
+        i = 0
+        for sprite in atlas.sprites:
+            self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
+                                                   int(sprite.texturey * self.zoomRatio),
+                                                   int(sprite.texturew * self.zoomRatio),
+                                                   int(sprite.textureh * self.zoomRatio))
+            i += 1
+        color = self.gc.get_colormap().alloc('black')
+        self.gc.set_foreground(color)
+
+    def zoomIn(self):
+        self.zoomRatio += 0.5
+        self.pixbuf = self.originalPixbuf.scale_simple(int(self.originalPixbuf.props.width * self.zoomRatio),
+                                                       int(self.originalPixbuf.props.height * self.zoomRatio),
+                                                       gtk.gdk.INTERP_BILINEAR)
+        self._drawImage()
+
+    def zoomOut(self):
+        self._cleanDrawingArea()
+        self.zoomRatio *= 0.5
+        self.pixbuf = self.originalPixbuf.scale_simple(int(self.originalPixbuf.props.width * self.zoomRatio),
+                                                       int(self.originalPixbuf.props.height * self.zoomRatio),
+                                                       gtk.gdk.INTERP_BILINEAR)
+        self._drawImage()
+
+    def zoom100(self):
+        self._cleanDrawingArea()
+        self.zoomRatio = 1.0
+        self.pixbuf = self.originalPixbuf
+        self._drawImage()
 
     #INTERNAL
+
+    def _cleanDrawingArea(self):
+        color = self.gc.get_colormap().alloc('white')
+        self.gc.set_foreground(color)
+        self.drawingArea.window.draw_rectangle(self.gc, True, 0, 0, self.drawingArea.get_allocation().width, self.drawingArea.get_allocation().height)
+        color = self.gc.get_colormap().alloc('black')
+        self.gc.set_foreground(color)
+
+    def _drawImage(self):
+        self.drawingArea.set_size_request(int(self.zoomRatio * self.drawable.size[0]), int(self.zoomRatio * self.drawable.size[1]))
+        self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
+        xsize = self.drawable.size[0] if self.drawable.size[0] > self.drawingArea.get_allocation().width else self.drawingArea.get_allocation().width
+        ysize = self.drawable.size[1] if self.drawable.size[1] > self.drawingArea.get_allocation().height else self.drawingArea.get_allocation().height
+        self.hruler.set_range(0.0, float(xsize / self.zoomRatio), 0.0, float(self.drawable.size[0] / self.zoomRatio))
+        self.vruler.set_range(0.0, float(ysize / self.zoomRatio), 0.0, float(self.drawable.size[1] / self.zoomRatio))
 
     def _exposeEventCb(self, widget, event):
         if self.gc == None:
             self.gc = self.get_style().fg_gc[gtk.STATE_NORMAL]
-            self.color = self.gc.get_colormap().alloc('navajo white')
+            self.color = self.gc.get_colormap().alloc('LimeGreen')
             self.gc.set_fill(gtk.gdk.SOLID)
-            self.gc.set_line_attributes(3, gtk.gdk.LINE_DOUBLE_DASH, gtk.gdk.CAP_NOT_LAST, gtk.gdk.JOIN_ROUND)            
+            self.gc.set_line_attributes(3, 0, gtk.gdk.CAP_NOT_LAST, gtk.gdk.JOIN_ROUND)            
         if self.pixbuf == None:
             return
-        self.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
+        self._drawImage()
+        if self.highlightedSprite:
+            sprite = self.highlightedSprite
+            self.drawingArea.window.draw_rectangle(self.gc, False, sprite.texturex, sprite.texturey, sprite.texturew, sprite.textureh)
+
+    def _motionNotifyCb(self, ruler, event):
+        ruler.emit("motion-notify-event", event)
+
+    def _keyPressedCb(self, widget, event):
+        print widget, event
+        return False

@@ -60,18 +60,21 @@ class BaseMenu(gtk.MenuItem):
         self.set_submenu(self.menu)
         self.show()
         
-    def addEntry(self, entryName, callBack = None, show = True):
-        item = gtk.MenuItem(entryName)
+    def addEntry(self, entryName, callBack = None, show = True, accel_group = None):
+        item = gtk.ImageMenuItem(entryName)
         if callBack is not None:
             item.connect("activate", callBack)
         self.menu.append(item)
         if show:
             item.show()
+        if (accel_group):
+            item.set_accel_group(accel_group)
+        return item
 
 class KSEMenuBar(gtk.MenuBar):
-    def __init__(self, toolbox, activityView):
+    def __init__(self, toolbox, activityView, accelGroup):
         gtk.MenuBar.__init__(self)
-        self.fileMenu = FileMenu(toolbox, activityView)
+        self.fileMenu = FileMenu(toolbox, activityView, accelGroup)
         self.sectionMenu = SectionMenu()
         self.aboutMenu = AboutMenu()
         self.show()
@@ -80,25 +83,26 @@ class KSEMenuBar(gtk.MenuBar):
         self.append(self.aboutMenu)
 
 class KSEToolBar(gtk.VBox):
-    def __init__(self, activityView):
+    def __init__(self, activityView, accelGroup):
         gtk.VBox.__init__(self)
         self.show()
         self.activityView = activityView
         self.toolbox = gtk.HBox()
-        self.menubar = KSEMenuBar(self.toolbox, activityView)
+        self.menubar = KSEMenuBar(self.toolbox, activityView, accelGroup)
         self.pack_start(self.menubar)
         self.add(self.toolbox)
         self.toolbox.show()
 
 class FileMenu(BaseMenu):
-    def __init__(self, buttonBox, activityView):
+    def __init__(self, buttonBox, activityView, accelGroup):
         BaseMenu.__init__(self, "File")
-        self.addEntry("New", None)
-        self.addEntry("Open", self._openProjectCb)
-        self.addEntry("Save", None)
-        self.addEntry("Save As...", self._saveProjectAsCb)
-        self.addEntry("Quit", None)
-        self.addEntry("Export", self._exportCb)
+        self.addEntry(gtk.STOCK_NEW, None)
+        self.addEntry("gtk-open", self._openProjectCb)
+        item = self.addEntry("gtk-save", self._saveProjectCb)
+        #item.add_accelerator("activate", accelGroup, ord('s'), gtk.gdk.CONTROL_MASK, gtk.ACCEL_VISIBLE)
+        #item.connect("activate", self._saveProjectCb)
+        self.addEntry("gtk-save-as", self._saveProjectAsCb)
+        self.addEntry("gtk-quit", None)
         image = gtk.Image()
         image.set_from_stock(gtk.STOCK_UNDO, gtk.ICON_SIZE_BUTTON)
         button = gtk.Button()
@@ -157,9 +161,14 @@ class FileMenu(BaseMenu):
         chooser.add_filter(filter)
         response = chooser.run()
         if response == gtk.RESPONSE_ACCEPT:
-            self.activityView.saveProject(chooser.get_filename())
+            self.activityView.saveProjectAs(chooser.get_filename())
             self.activityView.export()
         chooser.destroy()
+
+    def _saveProjectCb(self, fileMenu):
+        print "saving"
+        self.activityView.saveProject()
+        self.activityView.export()
 
     def _exportCb(self, fileMenu):
         self.activityView.export()

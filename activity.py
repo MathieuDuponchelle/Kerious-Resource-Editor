@@ -33,6 +33,8 @@ class KSEActivityView(gtk.Notebook):
         else:
             self.newProject()
 
+        self.currentPath = None
+
     def closeFile(self, fileName = None):
         self.graphics.resetTree()
         self.soundeffects.resetTree()
@@ -72,14 +74,22 @@ class KSEActivityView(gtk.Notebook):
             self.logger.info("User opened a resource file with filename : %s", fileName)
             if self.xmlHandler.isValid():
                 self.graphics.createTree(self.xmlHandler)
+                self.currentPath = fileName
             else:
                 ErrorMessage("The file you opened is not a valid KRF. Begone !")
                 self.logger.error("User tried to open an invalid KRF : %s", fileName)
 
-    def saveProject(self, fileName):
+    def saveProjectAs(self, fileName):
         node = self.xmlHandler.find("graphics")
         indent(node)
         self.xmlHandler.write(fileName)
+
+    def saveProject(self):
+        if self.currentPath is None:
+            return
+        node = self.xmlHandler.find("graphics")
+        indent(node)
+        self.xmlHandler.write(self.currentPath)
 
     def export(self):
         self.currentSection.export()

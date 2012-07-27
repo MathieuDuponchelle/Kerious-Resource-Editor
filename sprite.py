@@ -1,5 +1,8 @@
+import gtk
+
 from signallable import Signallable
 from loggable import Loggable
+from utils import make_ui_path
 
 class Sprite:
     def __init__(self, path, texturex, texturey, texturew, textureh):
@@ -16,5 +19,29 @@ class Sprite:
         self.texturey = int(texturey)
         self.texturew = int(texturew)
         self.textureh = int(textureh)
+        self.name = None
+        self.iter = None
+        self.xmlNode = None
 
-    
+    def updateName(self):
+        self.xmlNode.attrib["name"] = self.name
+
+class SpriteEditor(gtk.Builder):
+    def __init__(self, sprite):
+        gtk.Builder.__init__(self)
+        self.add_from_file(make_ui_path("sprite_editor"))
+        self.sprite = sprite
+        if sprite.name:
+            self.get_object("entry1").set_text(sprite.name)
+        self.get_object("button2").connect("clicked", self._applyCb)
+        self.get_object("button1").connect("clicked", self._cancelCb)
+
+    #INTERNAL
+
+    def _applyCb(self, widget):
+        self.sprite.name = self.get_object("entry1").get_text()
+        self.sprite.updateName()
+        self.get_object("dialog1").destroy()
+
+    def _cancelCb(self, widget):
+        self.get_object("dialog1").destroy()
