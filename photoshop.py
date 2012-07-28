@@ -49,6 +49,7 @@ class Photoshop(gtk.ScrolledWindow):
         self.gc = None
         self.highlightedSprites = None
         self.highlightedAnimations = None
+        self.allSelected = False
         self.zoomRatio = 1.0
 
         self.modShift = False
@@ -93,14 +94,17 @@ class Photoshop(gtk.ScrolledWindow):
     def highlight(self, atlas, sprite):
         self.gc.set_foreground(self.color)
 
-        color = self.gc.get_colormap().alloc('LimeGreen')
-        self.gc.set_foreground(color)
-        if self.highlightedSprites:
+        if self.highlightedSprites and self.allSelected:
+            color = self.gc.get_colormap().alloc('LimeGreen')
+            self.gc.set_foreground(color)
             for elem in self.highlightedSprites:
-                self.drawingArea.window.draw_rectangle(self.gc, False, int(elem.texturex * self.zoomRatio),
-                                                       int(elem.texturey * self.zoomRatio),
-                                                       int(elem.texturew * self.zoomRatio),
-                                                       int(elem.textureh * self.zoomRatio))            
+                if elem != None:
+                    self.drawingArea.window.draw_rectangle(self.gc, False, int(elem.texturex * self.zoomRatio),
+                                                           int(elem.texturey * self.zoomRatio),
+                                                           int(elem.texturew * self.zoomRatio),
+                                                           int(elem.textureh * self.zoomRatio))
+        else:
+             self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)  
 
         self.highlightedSprites = [sprite]
         color = self.gc.get_colormap().alloc('blue')
@@ -116,6 +120,7 @@ class Photoshop(gtk.ScrolledWindow):
     def highlightAll(self, atlas):
         self.highlightedSprites = atlas.sprites
         self.highlightedAnimations = atlas.animations
+        self.allSelected = True
         self.highlightSprites()
         self.highlightAnimations()
 

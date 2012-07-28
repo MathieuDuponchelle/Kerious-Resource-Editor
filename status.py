@@ -185,6 +185,15 @@ class KSEStatusView(gtk.VBox):
                 menu.append(item)
         menu.popup(None,None,None,event.button,event.time) 
 
+    def _reAlignSprites(self):
+        xref = self.currentSprites[0].texturex
+        yref = self.currentSprites[0].texturey
+        wref = self.currentSprites[0].texturew
+        href = self.currentSprites[0].textureh
+        for i, sprite in enumerate(self.currentSprites[1:]):
+            sprite.texturey = yref
+            sprite.texturex = (i + 1) * wref 
+
     def _atlasChangedCb(self, atlas, sprite):
         self.photoshop.displayImage(atlas.drawable.image)
 
@@ -253,6 +262,7 @@ class KSEStatusView(gtk.VBox):
         self.photoshop.highlightAll(self.currentAtlas)
 
     def _createAnimationCb(self, widget, sprite):
+        self._reAlignSprites()
         x = self.currentSprites[0].texturex
         y = self.currentSprites[0].texturey
         tilelen = len(self.currentSprites)
