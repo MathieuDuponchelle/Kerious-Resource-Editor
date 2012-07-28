@@ -6,7 +6,7 @@ from xml.etree.ElementTree import Element
 from utils import make_ui_path, is_contained_by
 from signallable import Signallable
 from loggable import Loggable
-from sprite import Sprite
+from sprite import Sprite, Animation
 
 class Atlas(Signallable, Loggable):
     __signals__ = {
@@ -27,6 +27,8 @@ class Atlas(Signallable, Loggable):
         self.maxOffset = 0
         self.xmlNode = None
         self.sprites = []
+        self.animations = []
+        self.currentSprite = 0
         self.factory = factory
 
     def setDrawable(self, drawable):
@@ -110,10 +112,32 @@ class Atlas(Signallable, Loggable):
                         coordinates[3], coordinates[0],
                         coordinates[1])
         self.sprites.append(sprite)
+        newNode = Element("sprite", attrib = {"name" : "",
+                                              "path" : str(sprite.path),
+                                              "texturex" : str(sprite.texturex),
+                                              "texturey" : str(sprite.texturey),
+                                              "texturew" : str(sprite.texturew),
+                                              "textureh" : str(sprite.textureh)})
+        self.xmlNode.append(newNode)
+        sprite.xmlNode = newNode
         #self.emit("sprite-referenced", sprite)
 
+    def referenceAnimation(self, coordinates, tilelen):
+        anim = Animation("NoResource", coordinates[2],
+                        coordinates[3], coordinates[0],
+                        coordinates[1], tilelen)
+        self.animations.append(anim)
+        newNode = Element("animation", attrib = {"name" : "",
+                                                 "path" : str(anim.path),
+                                                 "texturex" : str(anim.texturex),
+                                                 "texturey" : str(anim.texturey),
+                                                 "texturew" : str(anim.texturew),
+                                                 "textureh" : str(anim.textureh),
+                                                 "tilelen" : str(tilelen)})
+        self.xmlNode.append(newNode)
+        anim.xmlNode = newNode
+
     def extendSprites(self, size, alignment):
-        print "alligning", alignment
         for sprite in self.sprites:
             vdiff = size - (sprite.texturew % size)
             hdiff = size - (sprite.textureh % size)
@@ -127,21 +151,45 @@ class Atlas(Signallable, Loggable):
                 sprite.textureh += hdiff
             elif alignment == 2: #TOP
                 sprite.textureh += hdiff
-            
+            sprite.updateXmlNode()
 
-    def getSpriteForXY(self, x, y):
+    def coords_compare(self, elem1, elem2):
+        if elem1.texturey - elem2.texturey > 10: # NEXT LINE                                                                                                                                                                                      
+            return 1
+        elif elem1.texturey - elem2.texturey < -10: #PREVIOUS LINE                                                                                                                                                                                
+            return -1
+        return elem1.texturex - elem2.texturex # SAME LINE
+
+    def sortSprites(self):
+        self.sprites = sorted(self.sprites, cmp = self.coords_compare)
+
+    def getSpriteForXY(self, x, y, isCurrent = False):
         #FIXME : hack, accounting for the possible margin between the
         # event box bounds and the atlas bounds. I'm ashamed
-        for sprite in self.sprites:
+        for i, sprite in enumerate(self.sprites):
             try:
                 if is_contained_by(x, y,
                                    sprite.texturex,
                                    sprite.texturey,
                                    sprite.texturew,
                                    sprite.textureh):
+                    if isCurrent:
+                        self.currentSprite = i
                     return sprite
             except KeyError:
                 pass
+
+    def getNextSprite(self):
+        if self.currentSprite == len(self.sprites) - 1:
+            return self.sprites[self.currentSprite]
+        self.currentSprite += 1
+        return self.sprites[self.currentSprite]
+
+    def getPreviousSprite(self):
+        if self.currentSprite == 0:
+            return self.sprites[self.currentSprite]
+        self.currentSprite -= 1
+        return self.sprites[self.currentSprite]
 
     def _updateXmlNode(self, sprite):
         self.xmlNode.attrib["xoffset"] = str(self.xoffset)

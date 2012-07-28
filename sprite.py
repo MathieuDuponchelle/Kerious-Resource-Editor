@@ -26,6 +26,21 @@ class Sprite:
     def updateName(self):
         self.xmlNode.attrib["name"] = self.name
 
+    def updateXmlNode(self):
+        self.xmlNode.attrib["texturex"] = str(self.texturex)
+        self.xmlNode.attrib["texturey"] = str(self.texturey)
+        self.xmlNode.attrib["texturew"] = str(self.texturew)
+        self.xmlNode.attrib["textureh"] = str(self.textureh)
+
+class Animation(Sprite):
+    def __init__(self, path, texturex, texturey, texturew, textureh, tilelen):
+        Sprite.__init__(self, path, texturex, texturey, texturew, textureh)
+        self.tilelen = int(tilelen)
+
+    def updateXmlNode(self):
+        Sprite.updateXmlNode(self)
+        self.xmlNode.attrib["tilelen"] = str(self.tilelen)
+
 class SpriteEditor(gtk.Builder):
     def __init__(self, sprite):
         gtk.Builder.__init__(self)

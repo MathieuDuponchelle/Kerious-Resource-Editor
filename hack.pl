@@ -117,18 +117,6 @@ for (my $y = $samplestep; $y < $hei; $y+=$samplestep) {
                    method=>'filltoborder');
     $subject->Trim;
 
-    ## now clip the section of $subject out of orginal
-    ##
-    ##my $orig1 = $original->Clone;
-    ##$orig1->Crop($subject->Get('width').'x'.
-    ##             $subject->Get('height').
-    ##             '+'.$subject->Get('page.x').
-    ##             '+'.$subject->Get('page.y'));
-    ##$orig1->Set(page=>"0x0+0+0");
-    ##$orig1->Write($outfile);
-
-    ##print("subject at $x,$y -> $outfile\n");
-    ##printf("Coords : %d %d %d %d\n",  $subject->Get('width'), $subject->Get('height'), $subject->Get('page.x'), $subject->Get('page.y'));
     print MYFILE ($subject->Get('width') . ' ' . $subject->Get('height') . ' ' . $subject->Get('page.x') . ' ' . $subject->Get('page.y') . "\n");
 
     ## fill this subject's area with the background in flatbg.

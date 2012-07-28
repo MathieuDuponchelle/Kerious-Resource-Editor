@@ -24,13 +24,14 @@ class KSEStatusView(gtk.VBox):
         self.factory = DrawableFactory()
         self.workzone = instance
         self.logger = logging.getLogger("KRFEditor")
-        self.photoshop = Photoshop()
+        self.photoshop = Photoshop(self)
         vbox = gtk.VBox()
         hbox = gtk.HBox()
         hbox.pack_start(gtk.Label("atlas"), False, False, 0)
         self.pack_start(hbox, False, False, 0)
         self.pack_start(self.photoshop, True, True, 0)
         self.atlases = {}
+        self.selectedSprites = []
         self.currentAtlas = None
         self.photoshop.connect("button-press-event", self._keyReleasedCb)
         self.photoshop.drawingArea.props.has_tooltip = True
@@ -61,6 +62,17 @@ class KSEStatusView(gtk.VBox):
         button = gtk.ToolButton("gtk-preferences")
         hbox.pack_end(button, False, False, 0)
         button.connect("clicked", self._configureDetectorCb)
+
+        button = gtk.ToolButton("gtk-about")
+        hbox.pack_end(button, False, False, 0)
+        button.connect("clicked", self._highlightAllCb)
+
+        button = gtk.ToolButton("gtk-about")
+        hbox.pack_end(button, False, False, 0)
+        button.connect("clicked", self._highlightAllCb)
+
+        self.posLabel = gtk.Label()
+        hbox.pack_end(self.posLabel, False, False, 0)
 
         self.show_all()
 
@@ -141,28 +153,34 @@ class KSEStatusView(gtk.VBox):
         self.popup.append(menuItem)
 
     def _keyReleasedCb(self, widget, event):
-        print "clickity click", event
-        #self.photoshop.drawingArea.grab_focus()
         xoff = self.photoshop.vruler.get_allocation().width
         yoff = self.photoshop.hruler.get_allocation().height
         x = event.get_coords()[0] / self.photoshop.zoomRatio - xoff
         y = event.get_coords()[1] / self.photoshop.zoomRatio - yoff
-        sprite = self.currentAtlas.getSpriteForXY(x, y)
-        self.photoshop.highlight(sprite)
-        print sprite
-        if sprite == None:
-            return
+        sprite = self.currentAtlas.getSpriteForXY(x, y, True)
         if event.button == 3:
             self.build_context_menu(event, sprite)
+            return
+        if self.photoshop.modShift and sprite != None:
+            self.currentSprites.append(sprite)
+            self.photoshop.highlightSelected(self.currentSprites)
+        else:
+            self.currentSprites = [sprite]
+            self.photoshop.highlight(self.currentAtlas, sprite)
+        if sprite == None:
+            self.currentSprites = []
+            return
 
     def build_context_menu(self, event, sprite):
-        entries = [("Edit", self._doSomethingCb)]
+        entries = [("Edit", self._doSomethingCb, True),
+                   ("Create animation", self._createAnimationCb, len(self.currentSprites) > 1)]
 
         menu = gtk.Menu()
-        for stock_id,callback in entries:
+        for stock_id, callback, sensitivity in entries:
             item = gtk.MenuItem(stock_id)
             if callback:
                 item.connect("activate", callback, sprite)
+                item.set_sensitive(sensitivity)
                 item.show()
                 menu.append(item)
         menu.popup(None,None,None,event.button,event.time) 
@@ -223,8 +241,23 @@ class KSEStatusView(gtk.VBox):
         self.detector.startDetection(self.currentAtlas.path)
         coordinates = self.detector.getCoordinates()
         self.currentAtlas.sprites = []
+        self.currentAtlas.animations = []
         for elem in coordinates:
             self.currentAtlas.referenceSprite(elem)
         if self.detector.gravity != None:
             self.currentAtlas.extendSprites(self.detector.matchSize, self.detector.gravity)
+        self.currentAtlas.sortSprites()
         self.photoshop.highlightAll(self.currentAtlas)
+
+    def _highlightAllCb(self, widget):
+        self.photoshop.highlightAll(self.currentAtlas)
+
+    def _createAnimationCb(self, widget, sprite):
+        x = self.currentSprites[0].texturex
+        y = self.currentSprites[0].texturey
+        tilelen = len(self.currentSprites)
+        animw = self.currentSprites[0].texturew
+        animh = self.currentSprites[0].textureh
+        for sprite in self.currentSprites:
+            self.currentAtlas.sprites.remove(sprite)
+        self.currentAtlas.referenceAnimation([animw, animh, x, y], tilelen)

@@ -19,9 +19,11 @@ class Photoshop(gtk.ScrolledWindow):
     """
     Contained by : KSEStatusView
     """
-    def __init__(self):
+    def __init__(self, status):
         gtk.ScrolledWindow.__init__(self)
         self.logger = logging.getLogger("KRFEditor")
+
+        self.status = status
 
         self.table = gtk.Table()
         self.add_with_viewport(self.table)
@@ -33,6 +35,7 @@ class Photoshop(gtk.ScrolledWindow):
         self.table.attach(eventBox, 1, 2, 1, 2, gtk.FILL, gtk.FILL)
 
         eventBox.connect("key-press-event", self._keyPressedCb)
+        eventBox.connect("key-release-event", self._keyReleasedCb)
 
         self.hruler = gtk.HRuler()
         self.vruler = gtk.VRuler()
@@ -44,8 +47,12 @@ class Photoshop(gtk.ScrolledWindow):
 
         self.pixbuf = None
         self.gc = None
-        self.highlightedSprite = None
+        self.highlightedSprites = None
+        self.highlightedAnimations = None
         self.zoomRatio = 1.0
+
+        self.modShift = False
+        self.modCtrl = False
 
         self.show_all()
 
@@ -57,10 +64,47 @@ class Photoshop(gtk.ScrolledWindow):
         self.drawable = drawable
         self._drawImage()
 
-    def highlight(self, sprite):
+    def highlightSprites(self):
         self.gc.set_foreground(self.color)
         self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
-        self.highlightedSprite = sprite
+        i = 0
+        for sprite in self.highlightedSprites:
+            self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
+                                                   int(sprite.texturey * self.zoomRatio),
+                                                   int(sprite.texturew * self.zoomRatio),
+                                                   int(sprite.textureh * self.zoomRatio))
+            i += 1
+        color = self.gc.get_colormap().alloc('black')
+        self.gc.set_foreground(color)
+
+    def highlightAnimations(self):
+        color = self.gc.get_colormap().alloc('red')
+        self.gc.set_foreground(color)
+        i = 0
+        for anim in self.highlightedAnimations:
+            self.drawingArea.window.draw_rectangle(self.gc, False, int(anim.texturex * self.zoomRatio),
+                                                   int(anim.texturey * self.zoomRatio),
+                                                   int(anim.texturew * anim.tilelen * self.zoomRatio),
+                                                   int(anim.textureh * self.zoomRatio))
+            i += 1
+        color = self.gc.get_colormap().alloc('black')
+        self.gc.set_foreground(color)
+
+    def highlight(self, atlas, sprite):
+        self.gc.set_foreground(self.color)
+
+        color = self.gc.get_colormap().alloc('LimeGreen')
+        self.gc.set_foreground(color)
+        if self.highlightedSprites:
+            for elem in self.highlightedSprites:
+                self.drawingArea.window.draw_rectangle(self.gc, False, int(elem.texturex * self.zoomRatio),
+                                                       int(elem.texturey * self.zoomRatio),
+                                                       int(elem.texturew * self.zoomRatio),
+                                                       int(elem.textureh * self.zoomRatio))            
+
+        self.highlightedSprites = [sprite]
+        color = self.gc.get_colormap().alloc('blue')
+        self.gc.set_foreground(color)        
         if sprite != None:
             self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
                                                    int(sprite.texturey * self.zoomRatio),
@@ -70,17 +114,14 @@ class Photoshop(gtk.ScrolledWindow):
         self.gc.set_foreground(color)
 
     def highlightAll(self, atlas):
-        self.gc.set_foreground(self.color)
-        self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
-        i = 0
-        for sprite in atlas.sprites:
-            self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
-                                                   int(sprite.texturey * self.zoomRatio),
-                                                   int(sprite.texturew * self.zoomRatio),
-                                                   int(sprite.textureh * self.zoomRatio))
-            i += 1
-        color = self.gc.get_colormap().alloc('black')
-        self.gc.set_foreground(color)
+        self.highlightedSprites = atlas.sprites
+        self.highlightedAnimations = atlas.animations
+        self.highlightSprites()
+        self.highlightAnimations()
+
+    def highlightSelected(self, sprites):
+        self.highlightedSprites = sprites
+        self.highlightSprites()
 
     def zoomIn(self):
         self.zoomRatio += 0.5
@@ -121,6 +162,11 @@ class Photoshop(gtk.ScrolledWindow):
         self.vruler.set_range(0.0, float(ysize / self.zoomRatio), 0.0, float(self.drawable.size[1] / self.zoomRatio))
 
     def _exposeEventCb(self, widget, event):
+
+        self.drawingArea.grab_focus()
+
+        #First, draw the atlas itself
+
         if self.gc == None:
             self.gc = self.get_style().fg_gc[gtk.STATE_NORMAL]
             self.color = self.gc.get_colormap().alloc('LimeGreen')
@@ -129,13 +175,76 @@ class Photoshop(gtk.ScrolledWindow):
         if self.pixbuf == None:
             return
         self._drawImage()
-        if self.highlightedSprite:
-            sprite = self.highlightedSprite
-            self.drawingArea.window.draw_rectangle(self.gc, False, sprite.texturex, sprite.texturey, sprite.texturew, sprite.textureh)
+
+        #Then, redraw highlighted sprites
+        
+        if self.highlightedSprites:
+            self.gc.set_foreground(self.color)
+            for sprite in self.highlightedSprites:
+                if sprite != None:
+                    self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
+                                                           int(sprite.texturey * self.zoomRatio),
+                                                           int(sprite.texturew * self.zoomRatio),
+                                                           int(sprite.textureh * self.zoomRatio))
+            color = self.gc.get_colormap().alloc('black')
+            self.gc.set_foreground(color)
+        if self.highlightedAnimations:
+            self.highlightAnimations()
+
+    def _maybeMoveSprite(self, key):
+        if len(self.status.currentSprites) > 1:
+            return False
+        sprite = self.status.currentAtlas.sprites[self.status.currentAtlas.currentSprite]
+        if key == "Right":
+            sprite.texturex += 1
+        elif key == "Left":
+            sprite.texturex -= 1
+        elif key == "Up":
+            sprite.texturey -= 1
+        elif key == "Down":
+            sprite.texturey += 1
+        else:
+            return False
+        sprite.updateXmlNode()
+        self.highlight(self.status.currentAtlas, sprite)
 
     def _motionNotifyCb(self, ruler, event):
+        coords = event.get_coords()
+        self.status.posLabel.set_text(str(coords[0] / self.zoomRatio) + "," + str(coords[1] / self.zoomRatio))
         ruler.emit("motion-notify-event", event)
 
     def _keyPressedCb(self, widget, event):
-        print widget, event
+        key = gtk.gdk.keyval_name(event.keyval)
+        if self.modCtrl:
+            return (self._maybeMoveSprite(key))
+        elif key == "Right" or key == "Down" and not self.modCtrl:
+            self.highlight(self.status.currentAtlas, self.status.currentAtlas.getNextSprite())
+            return True
+        elif key == "Left" or key == "Up" and not self.modCtrl:
+            self.highlight(self.status.currentAtlas, self.status.currentAtlas.getPreviousSprite())
+            return True
+        elif key == "Delete":
+            try:
+                self.status.currentAtlas.sprites.pop(self.status.currentAtlas.currentSprite)
+            except IndexError:
+                self.highlight(None)
+                return True
+            self.highlight(self.status.currentAtlas, self.status.currentAtlas.sprites[self.status.currentAtlas.currentSprite])
+            return True
+        elif key == "Shift_L":
+            self.modShift = True
+            return True
+        elif key == "Control_L":
+            self.modCtrl = True
+            return True
+        return False
+
+    def _keyReleasedCb(self, widget, event):
+        key = gtk.gdk.keyval_name(event.keyval)
+        if key == "Shift_L":
+            self.modShift = False
+            return True
+        elif key == "Control_L":
+            self.modCtrl = False
+            return True
         return False
