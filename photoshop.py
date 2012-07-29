@@ -139,9 +139,6 @@ class Photoshop(gtk.ScrolledWindow):
         self.vruler.set_range(0.0, float(ysize / self.zoomRatio), 0.0, float(self.drawable.size[1] / self.zoomRatio))
 
     def _exposeEventCb(self, widget, event):
-
-        self.drawingArea.grab_focus()
-
         #First, draw the atlas itself
 
         if self.gc == None:

@@ -93,6 +93,7 @@ class GraphicsPanel(KSEPanel):
         hbox.pack_start(spinbutton, True, True, 0)
         hbox.show_all()
         self.pack_end(hbox, False, False, 0)
+        spinbutton.connect("button-press-event", self._buttonPressedCb)
 
     def _widthChangedCb(self, spinner):
         self.width = spinner.get_value()
@@ -122,6 +123,9 @@ class GraphicsPanel(KSEPanel):
                 pixbuf = gtk.gdk.pixbuf_new_from_file(uri)
                 pixbuf = pixbuf.scale_simple(64, 64, gtk.gdk.INTERP_BILINEAR)
                 self.model.append([get_name_from_uri(uri), pixbuf, uri])
+
+    def _buttonPressedCb(self, widget, event):
+        widget.grab_focus()
 
 class SoundEffectsPanel(KSEPanel):
     def __init__(self):

@@ -246,6 +246,7 @@ class KSEStatusView(gtk.VBox):
         return True
 
     def _buttonReleasedCb(self, widget, event):
+        self.photoshop.drawingArea.grab_focus()
         xoff = self.photoshop.vruler.get_allocation().width
         yoff = self.photoshop.hruler.get_allocation().height
         x = event.get_coords()[0] / self.photoshop.zoomRatio - xoff
