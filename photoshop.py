@@ -34,9 +34,6 @@ class Photoshop(gtk.ScrolledWindow):
         eventBox.add(self.drawingArea)
         self.table.attach(eventBox, 1, 2, 1, 2, gtk.FILL, gtk.FILL)
 
-        eventBox.connect("key-press-event", self._keyPressedCb)
-        eventBox.connect("key-release-event", self._keyReleasedCb)
-
         self.hruler = gtk.HRuler()
         self.vruler = gtk.VRuler()
         self.table.attach(self.hruler, 1, 2, 0, 1, gtk.EXPAND | gtk.FILL, gtk.FILL)
@@ -50,7 +47,7 @@ class Photoshop(gtk.ScrolledWindow):
         self.gc = None
         self.highlightedSprites = None
         self.highlightedAnimations = None
-        self.allSelected = False
+        self.allHighlighted = False
         self.zoomRatio = 1.0
 
         self.modShift = False
@@ -67,81 +64,41 @@ class Photoshop(gtk.ScrolledWindow):
         self.drawable = drawable
         self._drawImage()
 
-    def highlightSprites(self):
-        self.gc.set_foreground(self.color)
-        self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
-        i = 0
-        for sprite in self.highlightedSprites:
+    def highlight(self, sprite, selected):
+        if sprite == None:
+            return
+        if selected and not sprite.isAnim:
+            color = self.gc.get_colormap().alloc('blue')
+        elif selected:
+            color = self.gc.get_colormap().alloc('red')
+        else:
+            color = self.gc.get_colormap().alloc('LimeGreen')
+        self.gc.set_foreground(color)   
+        if not sprite.isAnim:
             self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
                                                    int(sprite.texturey * self.zoomRatio),
                                                    int(sprite.texturew * self.zoomRatio),
                                                    int(sprite.textureh * self.zoomRatio))
-            i += 1
-        color = self.gc.get_colormap().alloc('black')
-        self.gc.set_foreground(color)
-
-    def highlightAnimation(self, anim):
-        self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
-        color = self.gc.get_colormap().alloc('red')
-        self.gc.set_foreground(color)
-        self.drawingArea.window.draw_rectangle(self.gc, False, int(anim.texturex * self.zoomRatio),
-                                               int(anim.texturey * self.zoomRatio),
-                                               int(anim.texturew * anim.tilelen * self.zoomRatio),
-                                                int(anim.textureh * self.zoomRatio))
-        color = self.gc.get_colormap().alloc('black')
-        self.highlightedAnimations = [anim]
-        self.highlightedSprites = []
-        self.gc.set_foreground(color)
-
-    def highlightAnimations(self):
-        color = self.gc.get_colormap().alloc('red')
-        self.gc.set_foreground(color)
-        i = 0
-        for anim in self.highlightedAnimations:
-            self.drawingArea.window.draw_rectangle(self.gc, False, int(anim.texturex * self.zoomRatio),
-                                                   int(anim.texturey * self.zoomRatio),
-                                                   int(anim.texturew * anim.tilelen * self.zoomRatio),
-                                                   int(anim.textureh * self.zoomRatio))
-            i += 1
-        color = self.gc.get_colormap().alloc('black')
-        self.gc.set_foreground(color)
-
-    def highlight(self, atlas, sprite):
-        self.gc.set_foreground(self.color)
-
-        if self.highlightedSprites and self.allSelected:
-            color = self.gc.get_colormap().alloc('LimeGreen')
-            self.gc.set_foreground(color)
-            for elem in self.highlightedSprites:
-                if elem != None:
-                    self.drawingArea.window.draw_rectangle(self.gc, False, int(elem.texturex * self.zoomRatio),
-                                                           int(elem.texturey * self.zoomRatio),
-                                                           int(elem.texturew * self.zoomRatio),
-                                                           int(elem.textureh * self.zoomRatio))
-        else:
-             self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)  
-
-        self.highlightedSprites = [sprite]
-        color = self.gc.get_colormap().alloc('blue')
-        self.gc.set_foreground(color)        
-        if sprite != None:
+        elif sprite != None:
             self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
                                                    int(sprite.texturey * self.zoomRatio),
-                                                   int(sprite.texturew * self.zoomRatio),
+                                                   int(sprite.texturew * sprite.tilelen * self.zoomRatio),
                                                    int(sprite.textureh * self.zoomRatio))
         color = self.gc.get_colormap().alloc('black')
         self.gc.set_foreground(color)
 
     def highlightAll(self, atlas):
+        self._drawImage()
         self.highlightedSprites = atlas.sprites
         self.highlightedAnimations = atlas.animations
-        self.allSelected = True
-        self.highlightSprites()
-        self.highlightAnimations()
-
-    def highlightSelected(self, sprites):
-        self.highlightedSprites = sprites
-        self.highlightSprites()
+        self.allHighlighted = True
+        for elem in atlas.sprites:
+            self.highlight(elem, False)
+        for elem in atlas.animations:
+            self.highlight(elem, False)
+        if self.currentSelection:
+            for elem in self.currentSelection:
+                self.highlight(elem, True)
 
     def zoomIn(self):
         self.zoomRatio += 0.5
@@ -198,87 +155,24 @@ class Photoshop(gtk.ScrolledWindow):
 
         #Then, redraw highlighted sprites
         
-        if self.highlightedSprites:
-            self.gc.set_foreground(self.color)
-            for sprite in self.highlightedSprites:
-                if sprite != None:
-                    self.drawingArea.window.draw_rectangle(self.gc, False, int(sprite.texturex * self.zoomRatio),
-                                                           int(sprite.texturey * self.zoomRatio),
-                                                           int(sprite.texturew * self.zoomRatio),
-                                                           int(sprite.textureh * self.zoomRatio))
-            color = self.gc.get_colormap().alloc('black')
-            self.gc.set_foreground(color)
-        if self.highlightedAnimations:
-            self.highlightAnimations()
-
-    def _maybeMoveSprite(self, key):
-        if len(self.status.currentSprites) > 1 or (len(self.status.currentSprites) == 0 and len(self.status.currentAnim) == 0):
-            return False
-        isAnim = True
-        if len(self.status.currentSprites) > 0:
-            sprite = self.status.currentAtlas.sprites[self.status.currentAtlas.currentSprite]
-            isAnim = False
-        else:
-            sprite = self.status.currentAnim[0]
-        if key == "Right":
-            sprite.texturex += 1
-        elif key == "Left":
-            sprite.texturex -= 1
-        elif key == "Up":
-            sprite.texturey -= 1
-        elif key == "Down":
-            sprite.texturey += 1
-        else:
-            return False
-        sprite.updateXmlNode()
-        if (isAnim):
-            self.highlightAnimation(sprite)
-        else:
-            self.highlight(self.status.currentAtlas, sprite)
+        if self.allHighlighted:
+            self.highlightAll(self.status.currentAtlas)
+        elif self.currentSelection:
+            for elem in self.currentSelection:
+                self.highlight(elem, True)
 
     def _motionNotifyCb(self, ruler, event):
         coords = event.get_coords()
         self.status.posLabel.set_text(str(coords[0] / self.zoomRatio) + "," + str(coords[1] / self.zoomRatio))
         ruler.emit("motion-notify-event", event)
 
-    def _keyPressedCb(self, widget, event):
-        key = gtk.gdk.keyval_name(event.keyval)
-        if self.modCtrl:
-            return (self._maybeMoveSprite(key))
-        elif key == "Right" or key == "Down" and not self.modCtrl:
-            self.highlight(self.status.currentAtlas, self.status.currentAtlas.getNextSprite())
-            return True
-        elif key == "Left" or key == "Up" and not self.modCtrl:
-            self.highlight(self.status.currentAtlas, self.status.currentAtlas.getPreviousSprite())
-            return True
-        elif key == "Delete":
-            try:
-                self.status.currentAtlas.sprites.pop(self.status.currentAtlas.currentSprite)
-            except IndexError:
-                self.highlight(None)
-                return True
-            self.highlight(self.status.currentAtlas, self.status.currentAtlas.sprites[self.status.currentAtlas.currentSprite])
-            return True
-        elif key == "Shift_L":
-            self.modShift = True
-            return True
-        elif key == "Control_L":
-            self.modCtrl = True
-            return True
-        return False
-
-    def _keyReleasedCb(self, widget, event):
-        key = gtk.gdk.keyval_name(event.keyval)
-        if key == "Shift_L":
-            self.modShift = False
-            return True
-        elif key == "Control_L":
-            self.modCtrl = False
-            return True
-        return False
-
     def _atlasSelectionChangedCb(self, selection):
-        if self.currentSelection is not None:
-            print "old selection : ", self.currentSelection
-        print "new selection : ", selection.selected
+        if not self.allHighlighted:
+            self._drawImage()
+        elif self.currentSelection is not None:
+            for elem in self.currentSelection:
+                self.highlight(elem, False)
+
         self.currentSelection = selection.selected
+        for elem in self.currentSelection:
+            self.highlight(elem, True)

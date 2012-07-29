@@ -33,9 +33,12 @@ class KSEStatusView(gtk.VBox):
         self.atlases = {}
         self.selectedSprites = []
         self.currentAtlas = None
-        self.photoshop.connect("button-press-event", self._keyReleasedCb)
+        self.photoshop.connect("button-press-event", self._buttonReleasedCb)
         self.photoshop.drawingArea.props.has_tooltip = True
         self.photoshop.drawingArea.connect("query-tooltip", self._queryTooltipCb)
+
+        self.photoshop.eventBox.connect("key-press-event", self._keyPressedCb)
+        self.photoshop.eventBox.connect("key-release-event", self._keyReleasedCb)
 
         self.detector = autoSpriteDetector()
 
@@ -77,6 +80,8 @@ class KSEStatusView(gtk.VBox):
         self.show_all()
 
         self._setupPopup() #push the funk up
+        self.modCtrl = False
+        self.modShift = False
 
     def loadAtlasFromXml(self, node, filePath):
         try:
@@ -161,37 +166,12 @@ class KSEStatusView(gtk.VBox):
         if event.button == 3:
             self.build_context_menu(event, anim)
             return
-        self.currentAnim = [anim]
-        self.photoshop.highlightAnimation(anim)
-
-    def _keyReleasedCb(self, widget, event):
-        xoff = self.photoshop.vruler.get_allocation().width
-        yoff = self.photoshop.hruler.get_allocation().height
-        x = event.get_coords()[0] / self.photoshop.zoomRatio - xoff
-        y = event.get_coords()[1] / self.photoshop.zoomRatio - yoff
-        sprite = self.currentAtlas.getSpriteForXY(x, y, True)
-        if event.button == 3 and sprite != None:
-            self.build_context_menu(event, sprite)
-            return
-        if self.photoshop.modShift and sprite != None:
-            self.currentAtlas.selection.addObject(sprite)
-            self.currentSprites.append(sprite)
-            self.photoshop.highlightSelected(self.currentSprites)
-            self.currentAnim = []
-        else:
-            self.currentAtlas.selection.reset()
-            self.currentAtlas.selection.addObject(sprite)
-            self.currentSprites = [sprite]
-            self.currentAnim = []
-            self.photoshop.highlight(self.currentAtlas, sprite)
-        if sprite == None:
-            self.currentSprites = []
-            self._tryAnim(x, y, event)
-            return
+        self.currentAtlas.selection.reset()
+        self.currentAtlas.selection.addObject(anim)
 
     def build_context_menu(self, event, sprite):
         entries = [("Edit", self._doSomethingCb, True),
-                   ("Create animation", self._createAnimationCb, len(self.currentSprites) > 1)]
+                   ("Create animation", self._createAnimationCb, len(self.currentAtlas.selection.selected) > 1)]
 
         menu = gtk.Menu()
         for stock_id, callback, sensitivity in entries:
@@ -204,13 +184,31 @@ class KSEStatusView(gtk.VBox):
         menu.popup(None,None,None,event.button,event.time) 
 
     def _reAlignSprites(self):
-        xref = self.currentSprites[0].texturex
-        yref = self.currentSprites[0].texturey
-        wref = self.currentSprites[0].texturew
-        href = self.currentSprites[0].textureh
-        for i, sprite in enumerate(self.currentSprites[1:]):
+        xref = self.currentAtlas.selection.selected[0].texturex
+        yref = self.currentAtlas.selection.selected[0].texturey
+        wref = self.currentAtlas.selection.selected[0].texturew
+        href = self.currentAtlas.selection.selected[0].textureh
+        for i, sprite in enumerate(self.currentAtlas.selection.selected[1:]):
             sprite.texturey = yref
             sprite.texturex = xref + (i * wref) 
+
+    def _maybeMoveSprite(self, key):
+        if len(self.photoshop.currentSelection) != 1:
+            return False
+        sprite = self.photoshop.currentSelection[0]
+        if key == "Right":
+            sprite.texturex += 1
+        elif key == "Left":
+            sprite.texturex -= 1
+        elif key == "Up":
+            sprite.texturey -= 1
+        elif key == "Down":
+            sprite.texturey += 1
+        else:
+            return False
+        sprite.updateXmlNode()
+        self.currentAtlas.selection.reset()
+        self.currentAtlas.selection.addObject(sprite)
 
     def _atlasChangedCb(self, atlas, sprite):
         self.photoshop.displayImage(atlas.drawable.image)
@@ -247,6 +245,24 @@ class KSEStatusView(gtk.VBox):
         tooltip.set_custom(vbox)
         return True
 
+    def _buttonReleasedCb(self, widget, event):
+        xoff = self.photoshop.vruler.get_allocation().width
+        yoff = self.photoshop.hruler.get_allocation().height
+        x = event.get_coords()[0] / self.photoshop.zoomRatio - xoff
+        y = event.get_coords()[1] / self.photoshop.zoomRatio - yoff
+        sprite = self.currentAtlas.getSpriteForXY(x, y, True)
+        if event.button == 3 and sprite != None:
+            self.build_context_menu(event, sprite)
+            return
+        if self.modShift and sprite != None:
+            self.currentAtlas.selection.addObject(sprite)
+        else:
+            self.currentAtlas.selection.reset()
+            self.currentAtlas.selection.addObject(sprite)
+        if sprite == None:
+            self._tryAnim(x, y, event)
+            return
+
     def _zoomInCb(self, widget):
         self.photoshop.zoomIn()
 
@@ -282,16 +298,57 @@ class KSEStatusView(gtk.VBox):
     def _createAnimationCb(self, widget, sprite):
         self.photoshop.allSelected = False
         self._reAlignSprites()
-        x = self.currentSprites[0].texturex
-        y = self.currentSprites[0].texturey
+        x = self.currentAtlas.selection.selected[0].texturex
+        y = self.currentAtlas.selection.selected[0].texturey
         tilelen = 0
-        animw = self.currentSprites[0].texturew
-        animh = self.currentSprites[0].textureh
-        for sprite in self.currentSprites:
+        animw = self.currentAtlas.selection.selected[0].texturew
+        animh = self.currentAtlas.selection.selected[0].textureh
+        for sprite in self.currentAtlas.selection.selected:
             try:
-                self.currentAtlas.sprites.remove(sprite)
+                self.currentAtlas.unreferenceSprite(sprite)
                 tilelen += 1
             except ValueError:
                 continue
         anim = self.currentAtlas.referenceAnimation([animw, animh, x, y], tilelen)
-        self.photoshop.highlightAnimation(anim)
+        self.currentAtlas.selection.reset()
+        self.currentAtlas.selection.addObject(anim)
+
+    def _keyPressedCb(self, widget, event):
+        key = gtk.gdk.keyval_name(event.keyval)
+        if self.modCtrl:
+            return (self._maybeMoveSprite(key))
+        elif key == "Right" or key == "Down" and not self.modCtrl:
+            self.currentAtlas.selection.reset()
+            self.currentAtlas.selection.addObject(self.currentAtlas.getNextSprite())
+            return True
+        elif key == "Left" or key == "Up" and not self.modCtrl:
+            self.currentAtlas.selection.reset()
+            self.currentAtlas.selection.addObject(self.currentAtlas.getPreviousSprite())
+            return True
+        elif key == "Delete":
+            try:
+                self.currentAtlas.sprites.pop(self.currentAtlas.currentSprite)
+            except IndexError:
+                self.currentAtlas.selection.reset()
+                return True
+            self.currentAtlas.selection.reset()
+            self.currentAtlas.selection.add_object(self.currentAtlas.getCurrentSprite())
+            return True
+        elif key == "Shift_L":
+            print "ACTIVATED MOD SHIFT"
+            self.modShift = True
+            return True
+        elif key == "Control_L":
+            self.modCtrl = True
+            return True
+        return False
+
+    def _keyReleasedCb(self, widget, event):
+        key = gtk.gdk.keyval_name(event.keyval)
+        if key == "Shift_L":
+            self.modShift = False
+            return True
+        elif key == "Control_L":
+            self.modCtrl = False
+            return True
+        return False

@@ -107,9 +107,20 @@ class Atlas(Signallable, Loggable):
             self.sprites.append(sprite)
             sprite.xmlNode = elem
             self.emit("sprite-added", sprite)
-            
+
+        for elem in node.findall("animation"):
+            anim = Animation(elem.attrib["path"], elem.attrib["texturex"],
+                             elem.attrib["texturey"], elem.attrib["texturew"],
+                             elem.attrib["textureh"], elem.attrib["tilelen"])
+            self.animations.append(anim)
+            anim.xmlNode = elem
+            self.emit("sprite-added", anim)
+
+    def unreferenceSprite(self, sprite):
+        self.xmlNode.remove(sprite.xmlNode)
+        self.sprites.remove(sprite)
+
     def referenceSprite(self, coordinates):
-        #TODO : Manage Xml
         sprite = Sprite("NoResource", coordinates[2],
                         coordinates[3], coordinates[0],
                         coordinates[1])
@@ -197,6 +208,9 @@ class Atlas(Signallable, Loggable):
                     return anim
             except KeyError:
                 pass
+
+    def getCurrentSprite(self):
+        return self.sprites[self.currentSprite]
 
     def getNextSprite(self):
         if self.currentSprite == len(self.sprites) - 1:

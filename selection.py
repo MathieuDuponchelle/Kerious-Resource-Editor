@@ -27,3 +27,4 @@ class Selection(Signallable):
 
     def reset(self):
         self.selected = []
+        self.emit("selected-changed")
