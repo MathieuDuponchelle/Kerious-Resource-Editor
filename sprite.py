@@ -22,6 +22,7 @@ class Sprite:
         self.name = None
         self.iter = None
         self.xmlNode = None
+        self.isAnim = False
 
     def updateName(self):
         self.xmlNode.attrib["name"] = self.name
@@ -35,6 +36,7 @@ class Sprite:
 class Animation(Sprite):
     def __init__(self, path, texturex, texturey, texturew, textureh, tilelen):
         Sprite.__init__(self, path, texturex, texturey, texturew, textureh)
+        self.isAnim = True
         self.tilelen = int(tilelen)
 
     def updateXmlNode(self):

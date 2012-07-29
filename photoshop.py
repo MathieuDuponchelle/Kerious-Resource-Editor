@@ -45,6 +45,7 @@ class Photoshop(gtk.ScrolledWindow):
         self.drawingArea.connect_object("motion-notify-event", self._motionNotifyCb, self.hruler)
         self.drawingArea.connect_object("motion-notify-event", self._motionNotifyCb, self.vruler)
 
+        self.eventBox = eventBox
         self.pixbuf = None
         self.gc = None
         self.highlightedSprites = None
@@ -54,6 +55,7 @@ class Photoshop(gtk.ScrolledWindow):
 
         self.modShift = False
         self.modCtrl = False
+        self.currentSelection = None
 
         self.show_all()
 
@@ -76,6 +78,19 @@ class Photoshop(gtk.ScrolledWindow):
                                                    int(sprite.textureh * self.zoomRatio))
             i += 1
         color = self.gc.get_colormap().alloc('black')
+        self.gc.set_foreground(color)
+
+    def highlightAnimation(self, anim):
+        self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
+        color = self.gc.get_colormap().alloc('red')
+        self.gc.set_foreground(color)
+        self.drawingArea.window.draw_rectangle(self.gc, False, int(anim.texturex * self.zoomRatio),
+                                               int(anim.texturey * self.zoomRatio),
+                                               int(anim.texturew * anim.tilelen * self.zoomRatio),
+                                                int(anim.textureh * self.zoomRatio))
+        color = self.gc.get_colormap().alloc('black')
+        self.highlightedAnimations = [anim]
+        self.highlightedSprites = []
         self.gc.set_foreground(color)
 
     def highlightAnimations(self):
@@ -197,9 +212,14 @@ class Photoshop(gtk.ScrolledWindow):
             self.highlightAnimations()
 
     def _maybeMoveSprite(self, key):
-        if len(self.status.currentSprites) > 1:
+        if len(self.status.currentSprites) > 1 or (len(self.status.currentSprites) == 0 and len(self.status.currentAnim) == 0):
             return False
-        sprite = self.status.currentAtlas.sprites[self.status.currentAtlas.currentSprite]
+        isAnim = True
+        if len(self.status.currentSprites) > 0:
+            sprite = self.status.currentAtlas.sprites[self.status.currentAtlas.currentSprite]
+            isAnim = False
+        else:
+            sprite = self.status.currentAnim[0]
         if key == "Right":
             sprite.texturex += 1
         elif key == "Left":
@@ -211,7 +231,10 @@ class Photoshop(gtk.ScrolledWindow):
         else:
             return False
         sprite.updateXmlNode()
-        self.highlight(self.status.currentAtlas, sprite)
+        if (isAnim):
+            self.highlightAnimation(sprite)
+        else:
+            self.highlight(self.status.currentAtlas, sprite)
 
     def _motionNotifyCb(self, ruler, event):
         coords = event.get_coords()
@@ -253,3 +276,9 @@ class Photoshop(gtk.ScrolledWindow):
             self.modCtrl = False
             return True
         return False
+
+    def _atlasSelectionChangedCb(self, selection):
+        if self.currentSelection is not None:
+            print "old selection : ", self.currentSelection
+        print "new selection : ", selection.selected
+        self.currentSelection = selection.selected

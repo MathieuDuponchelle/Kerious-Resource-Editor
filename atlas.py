@@ -7,6 +7,7 @@ from utils import make_ui_path, is_contained_by
 from signallable import Signallable
 from loggable import Loggable
 from sprite import Sprite, Animation
+from selection import Selection
 
 class Atlas(Signallable, Loggable):
     __signals__ = {
@@ -30,6 +31,7 @@ class Atlas(Signallable, Loggable):
         self.animations = []
         self.currentSprite = 0
         self.factory = factory
+        self.selection = Selection()
 
     def setDrawable(self, drawable):
         self.drawable = drawable
@@ -136,6 +138,7 @@ class Atlas(Signallable, Loggable):
                                                  "tilelen" : str(tilelen)})
         self.xmlNode.append(newNode)
         anim.xmlNode = newNode
+        return anim
 
     def extendSprites(self, size, alignment):
         for sprite in self.sprites:
@@ -176,6 +179,22 @@ class Atlas(Signallable, Loggable):
                     if isCurrent:
                         self.currentSprite = i
                     return sprite
+            except KeyError:
+                pass
+
+    def getAnimForXY(self, x, y, isCurrent = False):
+        #FIXME : hack, accounting for the possible margin between the
+        # event box bounds and the atlas bounds. I'm ashamed
+        for i, anim in enumerate(self.animations):
+            try:
+                if is_contained_by(x, y,
+                                   anim.texturex,
+                                   anim.texturey,
+                                   anim.texturew * anim.tilelen,
+                                   anim.textureh):
+                    if isCurrent:
+                        self.currentAnim = i
+                    return anim
             except KeyError:
                 pass
 

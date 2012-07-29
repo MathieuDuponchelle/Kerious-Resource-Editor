@@ -103,9 +103,13 @@ class KSEStatusView(gtk.VBox):
             atlas.setXmlNode(node)
 
         self.currentAtlas = atlas
+        try:
+            atlas.selection.disconnect_by_function(self.photoshop._atlasSelectionChangedCb)
+        except Exception:
+            pass
+        atlas.selection.connect("selected-changed", self.photoshop._atlasSelectionChangedCb)
         self.photoshop.displayImage(drawable.image)
         self._getOffsetsFromXml(node)
-
 
     def mergeResource(self, width, height, path):
         atlas = self.currentAtlas
@@ -152,23 +156,37 @@ class KSEStatusView(gtk.VBox):
         menuItem.connect("activate", self._doSomethingCb)
         self.popup.append(menuItem)
 
+    def _tryAnim(self, x, y, event):
+        anim = self.currentAtlas.getAnimForXY(x, y, True)
+        if event.button == 3:
+            self.build_context_menu(event, anim)
+            return
+        self.currentAnim = [anim]
+        self.photoshop.highlightAnimation(anim)
+
     def _keyReleasedCb(self, widget, event):
         xoff = self.photoshop.vruler.get_allocation().width
         yoff = self.photoshop.hruler.get_allocation().height
         x = event.get_coords()[0] / self.photoshop.zoomRatio - xoff
         y = event.get_coords()[1] / self.photoshop.zoomRatio - yoff
         sprite = self.currentAtlas.getSpriteForXY(x, y, True)
-        if event.button == 3:
+        if event.button == 3 and sprite != None:
             self.build_context_menu(event, sprite)
             return
         if self.photoshop.modShift and sprite != None:
+            self.currentAtlas.selection.addObject(sprite)
             self.currentSprites.append(sprite)
             self.photoshop.highlightSelected(self.currentSprites)
+            self.currentAnim = []
         else:
+            self.currentAtlas.selection.reset()
+            self.currentAtlas.selection.addObject(sprite)
             self.currentSprites = [sprite]
+            self.currentAnim = []
             self.photoshop.highlight(self.currentAtlas, sprite)
         if sprite == None:
             self.currentSprites = []
+            self._tryAnim(x, y, event)
             return
 
     def build_context_menu(self, event, sprite):
@@ -192,7 +210,7 @@ class KSEStatusView(gtk.VBox):
         href = self.currentSprites[0].textureh
         for i, sprite in enumerate(self.currentSprites[1:]):
             sprite.texturey = yref
-            sprite.texturex = (i + 1) * wref 
+            sprite.texturex = xref + (i * wref) 
 
     def _atlasChangedCb(self, atlas, sprite):
         self.photoshop.displayImage(atlas.drawable.image)
@@ -262,12 +280,18 @@ class KSEStatusView(gtk.VBox):
         self.photoshop.highlightAll(self.currentAtlas)
 
     def _createAnimationCb(self, widget, sprite):
+        self.photoshop.allSelected = False
         self._reAlignSprites()
         x = self.currentSprites[0].texturex
         y = self.currentSprites[0].texturey
-        tilelen = len(self.currentSprites)
+        tilelen = 0
         animw = self.currentSprites[0].texturew
         animh = self.currentSprites[0].textureh
         for sprite in self.currentSprites:
-            self.currentAtlas.sprites.remove(sprite)
-        self.currentAtlas.referenceAnimation([animw, animh, x, y], tilelen)
+            try:
+                self.currentAtlas.sprites.remove(sprite)
+                tilelen += 1
+            except ValueError:
+                continue
+        anim = self.currentAtlas.referenceAnimation([animw, animh, x, y], tilelen)
+        self.photoshop.highlightAnimation(anim)

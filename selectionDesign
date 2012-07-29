@@ -1,0 +1,10 @@
+Selection shall belong to the Atlas.
+
+When an object is selected, the first thing emitted will be "unselected"
+Afterwards, "selected" shall be emitted,
+propagating the selection to the photoshop, which will be connected.
+
+When an Atlas is selected, the old atlas has its previous selection reset.
+
+Selection will be iterable, and sprites and anims will have a boolean isAnim,
+indicating whether the sprite is an animation(different color).
