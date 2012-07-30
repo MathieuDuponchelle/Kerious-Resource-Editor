@@ -85,7 +85,7 @@ class Atlas(Signallable, Loggable):
                     elem.attrib["texturex"] == str(sprite.texturex) and \
                     elem.attrib["texturey"] == str(sprite.texturey):
                 self.xmlNode.remove(elem)
-        image = self.factory.makeNewDrawable(sprite.texturew, sprite.texturew)
+        image = self.factory.makeNewDrawable(sprite.texturew, sprite.textureh)
         self.drawable.image.paste(image.image, (sprite.texturex, sprite.texturey))
         self.xoffset = self.xoffset - sprite.texturew
         if self.xoffset < 0:
