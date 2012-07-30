@@ -1,8 +1,8 @@
 import gtk
 from xml.etree.ElementTree import Element
 
-from panels import GraphicsPanel
-from workzones import KSEGraphicWorkzone
+from panels import GraphicsPanel, SoundPanel
+from workzones import KSEGraphicWorkzone, KSESoundWorkzone
 from atlas import AtlasCreator
 from utils import get_name_from_uri
 
@@ -35,6 +35,17 @@ class Section(gtk.HPaned):
         """
         pass
 
+    def addToResources(self, uris):
+        node = self.tree.find("resources")
+        if node == None:
+            node = Element("resources")
+            self.tree.append(node)
+        for uri in uris:
+            newNode = Element("resource", attrib =
+                              {"name" : get_name_from_uri(uri),
+                               "path" : uri})
+            node.append(newNode)
+
 class GraphicSection(Section):
     def __init__(self, instance):
         self.app = instance
@@ -56,17 +67,6 @@ class GraphicSection(Section):
         self.tree.append(newNode)
         self.workzone.addAtlas(newNode)
 
-    def addImagesToResources(self, uris):
-        node = self.tree.find("resources")
-        if node == None:
-            node = Element("resources")
-            self.tree.append(node)
-        for uri in uris:
-            newNode = Element("resource", attrib =
-                              {"name" : get_name_from_uri(uri),
-                               "path" : uri})
-            node.append(newNode)
-
     def export(self):
         self.workzone.export()
 
@@ -82,3 +82,20 @@ class GraphicSection(Section):
                                     self.graphics.height,
                                     model[path][2])
         self.app.action_log.commit()
+
+class SoundSection(Section):
+    def __init__(self, instance):
+        self.app = instance
+        self.sounds = SoundPanel(self)
+        Section.__init__(self, self.sounds, KSESoundWorkzone(self.app))
+
+    def createTree(self, tree):
+        self.tree = tree.find("sounds")
+        self.workzone.createTree(self.tree)
+        resources = self.tree.find("resources")
+        if resources != None:
+            self.sounds.loadProjectResources(resources)
+
+    def rowActivatedCb(self, treeview, path, column, model):
+        self.app.action_log.begin("add sprite")
+        self.workzone.mergeResource(model[path][2], model[path][0])

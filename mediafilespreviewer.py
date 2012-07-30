@@ -36,13 +36,10 @@ GlobalSettings.addConfigOption('FCpreviewHeight',
     key='video-preview-height',
     default=PREVIEW_HEIGHT)
 
-
-class PreviewWidget(gtk.VBox, Loggable):
-
+class SimplePreviewWidget(gtk.VBox, Loggable):
     def __init__(self, instance):
         gtk.VBox.__init__(self)
         Loggable.__init__(self)
-
         self.log("Init PreviewWidget")
         self.connect('destroy', self._destroy_cb)
 
@@ -72,19 +69,7 @@ class PreviewWidget(gtk.VBox, Loggable):
         self.current_preview_type = ""
         self.description = ""
         self.tags = {}
-
-        # Gui elements:
-        # Drawing area for video output
-        self.preview_video = ViewerWidget()
-        self.preview_video.modify_bg(gtk.STATE_NORMAL, self.preview_video.style.black)
-        self.pack_start(self.preview_video, expand=False)
-
-        # An image for images and audio
-        self.preview_image = gtk.Image()
-        self.preview_image.set_size_request(self.settings.FCpreviewWidth, self.settings.FCpreviewHeight)
-        self.preview_image.show()
-        self.pack_start(self.preview_image, expand=False)
-
+        
         # Play button
         self.bbox = gtk.HBox()
         self.play_button = gtk.ToolButton(gtk.STOCK_MEDIA_PLAY)
@@ -102,33 +87,22 @@ class PreviewWidget(gtk.VBox, Loggable):
         self.seeker.show()
         self.bbox.pack_start(self.seeker)
 
-        # Zoom buttons
+        self.pack_start(self.bbox, expand=False, fill=False)
+
+        self.preview_video = ViewerWidget()
+        self.preview_image = gtk.Image()
+
+        #Metadata
+        self.l_tags = gtk.Label()
+
+        #Error handling
+        self.l_error = gtk.Label(_("PiTiVi can not preview this file."))
+        self.b_details = gtk.Button(_("More info"))
+
         self.b_zoom_in = gtk.ToolButton(gtk.STOCK_ZOOM_IN)
         self.b_zoom_in.connect("clicked", self._on_zoom_clicked_cb, 1)
         self.b_zoom_out = gtk.ToolButton(gtk.STOCK_ZOOM_OUT)
         self.b_zoom_out.connect("clicked", self._on_zoom_clicked_cb, -1)
-        self.bbox.pack_start(self.b_zoom_in, expand=False)
-        self.bbox.pack_start(self.b_zoom_out, expand=False)
-        self.bbox.show_all()
-        self.pack_start(self.bbox, expand=False, fill=False)
-
-        # Label for metadata tags
-        self.l_tags = gtk.Label()
-        self.l_tags.set_justify(gtk.JUSTIFY_LEFT)
-        self.l_tags.set_ellipsize(pango.ELLIPSIZE_END)
-        self.l_tags.show()
-        self.pack_start(self.l_tags, expand=False, fill=False)
-
-        # Error handling
-        vbox = gtk.VBox()
-        vbox.set_spacing(SPACING)
-        self.l_error = gtk.Label(_("PiTiVi can not preview this file."))
-        self.b_details = gtk.Button(_("More info"))
-        self.b_details.connect('clicked', self._on_b_details_clicked_cb)
-        vbox.pack_start(self.l_error)
-        vbox.pack_start(self.b_details, expand=False, fill=False)
-        vbox.show()
-        self.pack_start(vbox, expand=False, fill=False)
 
     def _unsurePlaybin(self):
         try:
@@ -455,3 +429,39 @@ class PreviewWidget(gtk.VBox, Loggable):
                 w = width_in * h / height_in
                 return (w, h)
         return (width_in, height_in)
+
+
+class PreviewWidget(SimplePreviewWidget):
+
+    def __init__(self, instance):
+        SimplePreviewWidget.__init__(self, instance)
+
+        # Gui elements:
+        # Drawing area for video output
+        self.preview_video.modify_bg(gtk.STATE_NORMAL, self.preview_video.style.black)
+        self.pack_start(self.preview_video, expand=False)
+
+        # An image for images and audio
+        self.preview_image.set_size_request(self.settings.FCpreviewWidth, self.settings.FCpreviewHeight)
+        self.preview_image.show()
+        self.pack_start(self.preview_image, expand=False)
+
+        # Zoom buttons
+        self.bbox.pack_start(self.b_zoom_in, expand=False)
+        self.bbox.pack_start(self.b_zoom_out, expand=False)
+        self.bbox.show_all()
+
+        # Label for metadata tags
+        self.l_tags.set_justify(gtk.JUSTIFY_LEFT)
+        self.l_tags.set_ellipsize(pango.ELLIPSIZE_END)
+        self.l_tags.show()
+        self.pack_start(self.l_tags, expand=False, fill=False)
+
+        # Error handling
+        vbox = gtk.VBox()
+        vbox.set_spacing(SPACING)
+        self.b_details.connect('clicked', self._on_b_details_clicked_cb)
+        vbox.pack_start(self.l_error)
+        vbox.pack_start(self.b_details, expand=False, fill=False)
+        vbox.show()
+        self.pack_start(vbox, expand=False, fill=False)

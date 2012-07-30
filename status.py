@@ -2,6 +2,8 @@ import gtk
 import logging
 import pango
 
+from xml.etree.ElementTree import Element
+
 from photoshop import Photoshop
 from atlas import Atlas
 from factory import DrawableFactory
@@ -9,9 +11,12 @@ from observers import AtlasLogObserver
 from sprite import SpriteEditor
 from autoDetector import autoSpriteDetector
 from detectorSettings import AutoDetectorSettings
+from sounds import Sound
+
+from mediafilespreviewer import SimplePreviewWidget
 
 #TODO : subclass this ...
-class KSEStatusView(gtk.VBox):
+class KSEGraphicView(gtk.VBox):
     """
     Contained by : Workzone
     Status view is quite a bad name for this as we will also be able to
@@ -353,3 +358,50 @@ class KSEStatusView(gtk.VBox):
             self.modCtrl = False
             return True
         return False
+
+class KSESoundView(gtk.VBox):
+    def __init__(self, workzone):
+        gtk.VBox.__init__(self)
+        self.workzone = workzone
+        self.xmlNode = None
+        self.sounds = {}
+
+    def loadSoundFromXml(self, node, filePath):
+        try:
+            sound = self.sounds[filePath]
+        except KeyError:
+            pass
+        self.currentSound = sound
+
+    def addSoundWidget(self, elem):
+        hbox = gtk.HBox()
+        sound = Sound(elem)
+        try:
+            pw = SimplePreviewWidget(self.workzone.app)
+            pw.previewUri("file://" + elem.attrib["path"])
+            hbox.pack_start(pw, True, True, 0)
+        except AttributeError:
+            print "We must set the pythonpath"
+        label = gtk.Label(elem.attrib["path"])
+        entry = gtk.Entry()
+        entry.set_text(elem.attrib["name"])
+        entry.connect("activate", self._nameSetCb, elem)
+        hbox.pack_end(label, False, False, 0)
+        hbox.pack_end(entry, False, False, 0)
+        self.pack_start(hbox, False, False, 0)
+        pw.show_all()
+        self.show_all()
+
+    def _nameSetCb(self, widget, elem):
+        elem.attrib["name"] = widget.get_text()
+
+    def addSound(self, uri, name):
+        print name, "clop clop"
+        newNode = Element("sound", attrib = {"name" : "", "path" : uri})
+        self.xmlNode.append(newNode)
+        self.addSoundWidget(newNode)
+
+    def loadSounds(self, tree):
+        self.xmlNode = tree
+        for elem in tree.findall("sound"):
+            self.addSoundWidget(elem)

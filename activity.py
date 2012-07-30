@@ -1,7 +1,7 @@
 import gtk
 import logging
 
-from sections import GraphicSection
+from sections import GraphicSection, SoundSection
 from krfparser import KrfParser
 from indent import indent
 
@@ -21,11 +21,13 @@ class KSEActivityView(gtk.Notebook):
 
         self.app = instance
         self.graphics = GraphicSection(self.app)
+        self.sounds = SoundSection(self.app)
         self.currentSection = self.graphics
 #        self.soundeffects = Section(SoundEffectsPanel())
 #        self.musics = Section(MusicPanel())
 
         self.append_page(self.graphics, gtk.Label("Graphics Section"))
+        self.append_page(self.sounds, gtk.Label("Sound Section"))
 #        self.append_page(self.soundeffects, gtk.Label("Sound Effects Section"))
 #        self.append_page(self.musics, gtk.Label("Musics Section"))
         if fileName:
@@ -40,20 +42,6 @@ class KSEActivityView(gtk.Notebook):
         self.soundeffects.resetTree()
         self.musics.resetTree()
         self.xmlHandler = None
-
-    def parseAst(self, ast):
-        ret = False
-        if len(ast.sections) is 1:
-            for section in ast.sections[0].sections:
-                if section.name == "graphics":
-                    self.graphics.createTree(section)
-                elif section.name == "sound":
-                    for soundSection in section.sections:
-                        if soundSection.name == "effects":
-                            self.soundeffects.createTree(soundSection)
-                        elif soundSection.name == "musics":
-                            self.musics.createTree(soundSection)
-        return ret
 
     def newProject(self):
         pass
@@ -74,6 +62,7 @@ class KSEActivityView(gtk.Notebook):
             self.logger.info("User opened a resource file with filename : %s", fileName)
             if self.xmlHandler.isValid():
                 self.graphics.createTree(self.xmlHandler)
+                self.sounds.createTree(self.xmlHandler)
                 self.path = fileName
             else:
                 ErrorMessage("The file you opened is not a valid KRF. Begone !")
@@ -88,6 +77,8 @@ class KSEActivityView(gtk.Notebook):
         if self.path == None:
             return
         node = self.xmlHandler.find("graphics")
+        indent(node)
+        node = self.xmlHandler.find("sounds")
         indent(node)
         self.xmlHandler.write(self.path)
 

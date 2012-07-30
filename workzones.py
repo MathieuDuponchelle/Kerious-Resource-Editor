@@ -12,7 +12,7 @@
 
 import gtk
 
-from status import KSEStatusView
+from status import KSEGraphicView, KSESoundView
 from error import ErrorMessage
 from utils import is_contained_by
 
@@ -38,10 +38,28 @@ class KSEWorkzone(gtk.VPaned):
         scrolledWindow.add(self.treeview)
         scrolledWindow.set_size_request(-1, 200)
         #scrolledWindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.notebook = KSEStatusView(self)
         self.add1(scrolledWindow)
         self.add2(self.notebook)
         self.show_all()
+
+    def _loadAtlasFromXml(self, node, path):
+        self.current = path
+        filePath = None
+        try:
+            filePath = node.attrib["path"]
+            self.notebook.loadAtlasFromXml(node, filePath)
+        except KeyError:
+            ErrorMessage("No Path for this node :/")
+
+    def createTree(self, tree):
+        self.tree = tree
+        self.model = gtk.TreeStore(str)
+        self.treeview.set_model(self.model)
+        self.treeview.connect("row-activated", self._newSelectionCb)
+
+    def _newSelectionCb(self, treeview, path, view_column):
+        node = self.sectionCallbacks[path[0]](path[1])
+        self._loadAtlasFromXml(node, path)
 
     def export(self):
         pass
@@ -49,16 +67,11 @@ class KSEWorkzone(gtk.VPaned):
 class KSEGraphicWorkzone(KSEWorkzone):
     def __init__(self, instance):
         self.app = instance
+        self.notebook = KSEGraphicView(self)
         KSEWorkzone.__init__(self)
         self.sectionCallbacks = [self._getAtlasFromPath]
         self.current = None
 
-    def createTree(self, tree):
-        self.tree = tree
-        self.model = gtk.TreeStore(str)
-        self.treeview.set_model(self.model)
-        self._addAtlases()
-        self.treeview.connect("row-activated", self._newSelectionCb)
 
     def addAtlas(self, node):
         self.model.append(self.model.get_iter((0,)), [node.attrib["name"]])
@@ -73,6 +86,10 @@ class KSEGraphicWorkzone(KSEWorkzone):
 
     def mergeResource(self, width, height, path):
         self.notebook.mergeResource(width, height, path)
+
+    def createTree(self, tree):
+        KSEWorkzone.createTree(self, tree)
+        self._addAtlases()
 
     #INTERNAL
 
@@ -91,19 +108,6 @@ class KSEGraphicWorkzone(KSEWorkzone):
     def _getAtlasFromPath(self, path):
         return self.atlases[path]
 
-    def _loadAtlasFromXml(self, node, path):
-        self.current = path
-        filePath = None
-        try:
-            filePath = node.attrib["path"]
-            self.notebook.loadAtlasFromXml(node, filePath)
-        except KeyError:
-            ErrorMessage("No Path for this node :/")
-
-    def _newSelectionCb(self, treeview, path, view_column):
-        node = self.sectionCallbacks[path[0]](path[1])
-        self._loadAtlasFromXml(node, path)
-
     def _spriteAddedCb(self, atlas, sprite):
         atlas = self.model.get_iter(self.current)
         sprite.iter = self.model.append(atlas, [sprite.path])
@@ -111,3 +115,16 @@ class KSEGraphicWorkzone(KSEWorkzone):
     def _spriteRemovedCb(self, atlas, sprite):
         atlas = self.model.get_iter(self.current)
         self.model.remove(sprite.iter)
+
+class KSESoundWorkzone(KSEWorkzone):
+    def __init__(self, instance):
+        self.app = instance
+        self.notebook = KSESoundView(self)
+        KSEWorkzone.__init__(self)
+
+    def mergeResource(self, uri, name):
+        self.notebook.addSound(uri, name)
+
+    def createTree(self, tree):
+        KSEWorkzone.createTree(self, tree)
+        self.notebook.loadSounds(tree)
