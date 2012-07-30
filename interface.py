@@ -162,34 +162,14 @@ class FileMenu(BaseMenu):
             print "Nothing to redo anymore"
 
     def _openProjectCb(self, fileMenu):
-        chooser = gtk.FileChooserDialog(title="Open project", action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                                        buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-        filter = gtk.FileFilter()
-        filter.add_pattern("*.krf")
-        filter.set_name("Kerious Ressources File (*.ksf)")
-        chooser.add_filter(filter)
-        response = chooser.run()
-        if response == gtk.RESPONSE_OK:
-            self.activityView.openProject(chooser.get_filename())
-        chooser.destroy()
+        self.activityView.browse()
 
     def _saveProjectAsCb(self, fileMenu):
-        chooser = gtk.FileChooserDialog(title="Save project", action=gtk.FILE_CHOOSER_ACTION_SAVE,
-                                        buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
-        filter = gtk.FileFilter()
-        filter.add_pattern("*.krf")
-        filter.set_name("Kerious Ressources File (*.ksf)")
-        chooser.add_filter(filter)
-        response = chooser.run()
-        if response == gtk.RESPONSE_ACCEPT:
-            self.activityView.saveProjectAs(chooser.get_filename())
-            self.activityView.export()
-        chooser.destroy()
+        self.activityView.saveProjectAs()
 
     def _saveProjectCb(self, fileMenu):
         print "saving"
         self.activityView.saveProject()
-        self.activityView.export()
 
     def _exportCb(self, fileMenu):
         self.activityView.export()

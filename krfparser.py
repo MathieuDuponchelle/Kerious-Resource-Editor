@@ -4,11 +4,6 @@ class KrfParser(ElementTree):
     def __init__ (self, name):
         ElementTree.__init__(self)
         self.parse(name)
-        #p = self.find("graphics/atlas")
-        #print p
-        #print dir(p)
-        #print p.attrib['name']
-        #print p._children
 
     def isValid(self):
         if self.find("graphics") == None:

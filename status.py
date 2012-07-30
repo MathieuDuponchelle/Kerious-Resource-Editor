@@ -109,6 +109,10 @@ class KSEGraphicView(gtk.VBox):
             except:
                 drawable = self.factory.makeNewDrawable(node.attrib["width"], node.attrib["height"])
 
+            if not node.attrib["width"]: #Imported atlas
+                node.attrib["width"] = drawable.image.size[0]
+                node.attrib["height"] = drawable.image.size[1]
+
             atlas.setDrawable(drawable)
             atlas.setXmlNode(node)
 

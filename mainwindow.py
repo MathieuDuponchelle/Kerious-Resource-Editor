@@ -6,6 +6,7 @@ from activity import KSEActivityView
 from interface import KSEToolBar
 from settings import GlobalSettings
 from undo import UndoableActionLog
+from startupwizard import StartUpWizard
 
 WINDOWTITLE="Kerious Ressources Editor"
 WINWIDTH=1024
@@ -42,6 +43,10 @@ class KSEWindow:
         self.window.connect("delete_event", self.stop)
         self.window.maximize()
         self.window.show()
+
+        if fileName == None:
+            self.wizard = StartUpWizard(self)
+            self.wizard.show()
 
     def start(self):
         gtk.main()

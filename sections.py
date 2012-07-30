@@ -75,6 +75,19 @@ class GraphicSection(Section):
     def addAtlasCb(self, unused):
         AtlasCreator(self)
 
+    def importAtlasCb(self, unused):
+        chooser = gtk.FileChooserDialog(title="Import atlas", action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                                        buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        response = chooser.run()
+        if response == gtk.RESPONSE_OK:
+            newNode = Element("atlas", attrib = {"name" : chooser.get_filename(),
+                                                 "path" : chooser.get_filename(),
+                                                 "width" : "",
+                                                 "height" : ""})
+            self.tree.append(newNode)
+            self.workzone.addAtlas(newNode)
+        chooser.destroy()
+
     # Hackish, connected to the graphics panel's treeview.
     def rowActivatedCb(self, treeview, path, column, model):
         self.app.action_log.begin("add sprite")

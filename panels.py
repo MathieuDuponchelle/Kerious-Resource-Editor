@@ -91,9 +91,11 @@ class GraphicsPanel(KSEPanel):
     def __init__(self, instance):
         self.instance = instance
         KSEPanel.__init__(self)
-        self.butAddAtlas = Button("Add atlas", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
+        self.butAddAtlas = Button("Create atlas", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
+        self.butImportAtlas = Button("Import atlas", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
         self.butAddAnimation = Button("Add animation", self, Button.PACKSTART, show=True, imageLink=IMAGE_ADD)
         self.butAddAtlas.connect("clicked", self.instance.addAtlasCb)
+        self.butImportAtlas.connect("clicked", self.instance.importAtlasCb)
 
         pixbufcol = gtk.TreeViewColumn("Icon")
         pixbufcol.set_expand(False)
