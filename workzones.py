@@ -37,7 +37,7 @@ class KSEWorkzone(gtk.VPaned):
         self.treeview = KSETree()
         scrolledWindow.add(self.treeview)
         scrolledWindow.set_size_request(-1, 200)
-        #scrolledWindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        scrolledWindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.add1(scrolledWindow)
         self.add2(self.notebook)
         self.show_all()
