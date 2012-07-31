@@ -112,5 +112,5 @@ class KSEActivityView(gtk.Notebook):
         indent(node)
         node = self.xmlHandler.find("sounds")
         indent(node)
-        self.xmlHandler.write(fileName)
+        self.xmlHandler.write(fileName, encoding="utf-8", xml_declaration=True)
         self.export()

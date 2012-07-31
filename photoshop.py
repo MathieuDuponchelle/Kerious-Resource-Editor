@@ -6,6 +6,8 @@ import logging
 
 def Image_to_GdkPixbuf (image):
     file = StringIO.StringIO ()
+    if image.mode != "RGBA":
+        image = image.convert("RGBA")
     image.save (file, 'ppm')
     contents = file.getvalue()
     file.close ()

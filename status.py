@@ -200,21 +200,23 @@ class KSEGraphicView(gtk.VBox):
 
     def _maybeMoveSprite(self, key):
         if len(self.photoshop.currentSelection) != 1:
-            return False
+            return True
         sprite = self.photoshop.currentSelection[0]
-        if key == "Right":
+        if key == "d":
             sprite.texturex += 1
-        elif key == "Left":
+        elif key == "q":
             sprite.texturex -= 1
-        elif key == "Up":
+        elif key == "z":
             sprite.texturey -= 1
-        elif key == "Down":
+        elif key == "s":
             sprite.texturey += 1
         else:
             return False
         sprite.updateXmlNode()
         self.currentAtlas.selection.reset()
         self.currentAtlas.selection.addObject(sprite)
+        self.photoshop.highlightAll(self.currentAtlas)
+        return True
 
     def _atlasChangedCb(self, atlas, sprite):
         self.photoshop.displayImage(atlas.drawable.image)
@@ -265,7 +267,7 @@ class KSEGraphicView(gtk.VBox):
             return
         if self.modShift and sprite != None:
             self.currentAtlas.selection.addObject(sprite)
-        else:
+        elif sprite != None:
             self.currentAtlas.selection.reset()
             self.currentAtlas.selection.addObject(sprite)
         if sprite == None:
@@ -324,9 +326,10 @@ class KSEGraphicView(gtk.VBox):
         self.currentAtlas.highlightAll()
 
     def _keyPressedCb(self, widget, event):
+        self.photoshop.drawingArea.grab_focus()
         key = gtk.gdk.keyval_name(event.keyval)
-        if self.modCtrl:
-            return (self._maybeMoveSprite(key))
+        if self._maybeMoveSprite(key):
+            return True
         elif key == "Right" or key == "Down":
             self.currentAtlas.selection.reset()
             self.currentAtlas.selection.addObject(self.currentAtlas.getNextSprite())
@@ -348,7 +351,7 @@ class KSEGraphicView(gtk.VBox):
         elif key == "Shift_L":
             self.modShift = True
             return True
-        elif key == "Control_L":
+        elif key == "space":
             self.modCtrl = True
             return True
         return False
@@ -358,7 +361,7 @@ class KSEGraphicView(gtk.VBox):
         if key == "Shift_L":
             self.modShift = False
             return True
-        elif key == "Control_L":
+        elif key == "space":
             self.modCtrl = False
             return True
         return False
