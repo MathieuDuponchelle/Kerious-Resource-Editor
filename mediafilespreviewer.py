@@ -96,7 +96,7 @@ class SimplePreviewWidget(gtk.VBox, Loggable):
         self.l_tags = gtk.Label()
 
         #Error handling
-        self.l_error = gtk.Label(_("PiTiVi can not preview this file."))
+        self.l_error = gtk.Label(_("KSE can not preview this file."))
         self.b_details = gtk.Button(_("More info"))
 
         self.b_zoom_in = gtk.ToolButton(gtk.STOCK_ZOOM_IN)

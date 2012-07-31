@@ -28,7 +28,7 @@ class KSEPanel(gtk.VBox):
         self.listview.set_model(self.model)
         scrolledWindow = gtk.ScrolledWindow()
         scrolledWindow.add_with_viewport(self.listview)
-        self.pack_start(scrolledWindow, True, True, 0)
+        self.pack_end(scrolledWindow, True, True, 0)
         resources = gtk.TreeViewColumn("Resources")
         cell = gtk.CellRendererText()
         resources.pack_start(cell, True)
@@ -123,9 +123,9 @@ class GraphicsPanel(KSEPanel):
         spinbutton.set_wrap(True)
         spinbutton.show()
         spinbutton.connect("value_changed", function)
-        hbox.pack_start(spinbutton, True, True, 0)
+        hbox.pack_end(spinbutton, True, True, 0)
         hbox.show_all()
-        self.pack_end(hbox, False, False, 0)
+        self.pack_start(hbox, False, False, 0)
         spinbutton.connect("button-press-event", self._buttonPressedCb)
 
     def _widthChangedCb(self, spinner):

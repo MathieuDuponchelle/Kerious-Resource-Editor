@@ -104,7 +104,7 @@ class Photoshop(gtk.ScrolledWindow):
         self.zoomRatio += 0.5
         self.pixbuf = self.originalPixbuf.scale_simple(int(self.originalPixbuf.props.width * self.zoomRatio),
                                                        int(self.originalPixbuf.props.height * self.zoomRatio),
-                                                       gtk.gdk.INTERP_BILINEAR)
+                                                       gtk.gdk.INTERP_HYPER)
         self._drawImage()
 
     def zoomOut(self):
@@ -112,7 +112,7 @@ class Photoshop(gtk.ScrolledWindow):
         self.zoomRatio *= 0.5
         self.pixbuf = self.originalPixbuf.scale_simple(int(self.originalPixbuf.props.width * self.zoomRatio),
                                                        int(self.originalPixbuf.props.height * self.zoomRatio),
-                                                       gtk.gdk.INTERP_BILINEAR)
+                                                       gtk.gdk.INTERP_HYPER)
         self._drawImage()
 
     def zoom100(self):

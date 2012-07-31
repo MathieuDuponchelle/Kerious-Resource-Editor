@@ -75,10 +75,6 @@ class KSEGraphicView(gtk.VBox):
         hbox.pack_end(button, False, False, 0)
         button.connect("clicked", self._highlightAllCb)
 
-        button = gtk.ToolButton("gtk-about")
-        hbox.pack_end(button, False, False, 0)
-        button.connect("clicked", self._highlightAllCb)
-
         self.posLabel = gtk.Label()
         hbox.pack_end(self.posLabel, False, False, 0)
 
@@ -110,8 +106,8 @@ class KSEGraphicView(gtk.VBox):
                 drawable = self.factory.makeNewDrawable(node.attrib["width"], node.attrib["height"])
 
             if not node.attrib["width"]: #Imported atlas
-                node.attrib["width"] = drawable.image.size[0]
-                node.attrib["height"] = drawable.image.size[1]
+                node.attrib["width"] = str(drawable.image.size[0])
+                node.attrib["height"] = str(drawable.image.size[1])
 
             atlas.setDrawable(drawable)
             atlas.setXmlNode(node)
@@ -337,12 +333,13 @@ class KSEGraphicView(gtk.VBox):
             return True
         elif key == "Delete":
             try:
-                self.currentAtlas.sprites.pop(self.currentAtlas.currentSprite)
+                self.currentAtlas.unreferenceSprite(self.currentAtlas.sprites[self.currentAtlas.currentSprite])
+                self.photoshop.highlightAll(self.currentAtlas)
             except IndexError:
                 self.currentAtlas.selection.reset()
                 return True
             self.currentAtlas.selection.reset()
-            self.currentAtlas.selection.add_object(self.currentAtlas.getCurrentSprite())
+            self.currentAtlas.selection.addObject(self.currentAtlas.getCurrentSprite())
             return True
         elif key == "Shift_L":
             print "ACTIVATED MOD SHIFT"

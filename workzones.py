@@ -58,6 +58,8 @@ class KSEWorkzone(gtk.VPaned):
         self.treeview.connect("row-activated", self._newSelectionCb)
 
     def _newSelectionCb(self, treeview, path, view_column):
+        if len(path) < 2:
+            return
         node = self.sectionCallbacks[path[0]](path[1])
         self._loadAtlasFromXml(node, path)
 
