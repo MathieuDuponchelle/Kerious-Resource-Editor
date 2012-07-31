@@ -57,6 +57,7 @@ class StartUpWizard(object):
     def _newProjectCb(self, unused_button):
         """Handle a click on the New (Project) button."""
         self.app.activityView.newProject()
+        self.window.destroy()
 
     def _loadCb(self, unused_recent_chooser):
         """Handle a double-click on the recent chooser."""

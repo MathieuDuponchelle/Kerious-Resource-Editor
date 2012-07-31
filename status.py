@@ -254,9 +254,11 @@ class KSEGraphicView(gtk.VBox):
         self.photoshop.drawingArea.grab_focus()
         xoff = self.photoshop.vruler.get_allocation().width
         yoff = self.photoshop.hruler.get_allocation().height
-        x = event.get_coords()[0] / self.photoshop.zoomRatio - xoff
-        y = event.get_coords()[1] / self.photoshop.zoomRatio - yoff
+        x = event.get_coords()[0] / self.photoshop.zoomRatio
+        y = event.get_coords()[1] / self.photoshop.zoomRatio
         sprite = self.currentAtlas.getSpriteForXY(x, y, True)
+        print sprite.texturex, sprite.texturey
+        #3 == Right click
         if event.button == 3 and sprite != None:
             self.build_context_menu(event, sprite)
             return
@@ -318,16 +320,17 @@ class KSEGraphicView(gtk.VBox):
         anim = self.currentAtlas.referenceAnimation([animw, animh, x, y], tilelen)
         self.currentAtlas.selection.reset()
         self.currentAtlas.selection.addObject(anim)
+        self.currentAtlas.highlightAll()
 
     def _keyPressedCb(self, widget, event):
         key = gtk.gdk.keyval_name(event.keyval)
         if self.modCtrl:
             return (self._maybeMoveSprite(key))
-        elif key == "Right" or key == "Down" and not self.modCtrl:
+        elif key == "Right" or key == "Down":
             self.currentAtlas.selection.reset()
             self.currentAtlas.selection.addObject(self.currentAtlas.getNextSprite())
             return True
-        elif key == "Left" or key == "Up" and not self.modCtrl:
+        elif key == "Left" or key == "Up":
             self.currentAtlas.selection.reset()
             self.currentAtlas.selection.addObject(self.currentAtlas.getPreviousSprite())
             return True
@@ -342,7 +345,6 @@ class KSEGraphicView(gtk.VBox):
             self.currentAtlas.selection.addObject(self.currentAtlas.getCurrentSprite())
             return True
         elif key == "Shift_L":
-            print "ACTIVATED MOD SHIFT"
             self.modShift = True
             return True
         elif key == "Control_L":
