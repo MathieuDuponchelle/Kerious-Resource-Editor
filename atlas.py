@@ -133,6 +133,7 @@ class Atlas(Signallable, Loggable):
                                               "textureh" : str(sprite.textureh)})
         self.xmlNode.append(newNode)
         sprite.xmlNode = newNode
+        return sprite
         #self.emit("sprite-referenced", sprite)
 
     def referenceAnimation(self, coordinates, tilelen):

@@ -175,14 +175,15 @@ class KSEGraphicView(gtk.VBox):
         self.currentAtlas.selection.addObject(anim)
 
     def build_context_menu(self, event, sprite):
-        entries = [("Edit", self._doSomethingCb, True),
-                   ("Create animation", self._createAnimationCb, len(self.currentAtlas.selection.selected) > 1)]
+        entries = [("Edit", self._doSomethingCb, sprite != None),
+                   ("Create animation", self._createAnimationCb, len(self.currentAtlas.selection.selected) > 1),
+                   ("Add sprite", self._addSpriteCb, True)]
 
         menu = gtk.Menu()
         for stock_id, callback, sensitivity in entries:
             item = gtk.MenuItem(stock_id)
             if callback:
-                item.connect("activate", callback, sprite)
+                item.connect("activate", callback, sprite, event.get_coords())
                 item.set_sensitive(sensitivity)
                 item.show()
                 menu.append(item)
@@ -218,7 +219,7 @@ class KSEGraphicView(gtk.VBox):
     def _atlasChangedCb(self, atlas, sprite):
         self.photoshop.displayImage(atlas.drawable.image)
 
-    def _doSomethingCb(self, menuItem, sprite):
+    def _doSomethingCb(self, menuItem, sprite, event):
         spriteEditor = SpriteEditor(sprite)
 
     def _queryTooltipCb(self, widget, x, y, mode, tooltip):
@@ -257,7 +258,7 @@ class KSEGraphicView(gtk.VBox):
         x = event.get_coords()[0] / self.photoshop.zoomRatio - xoff
         y = event.get_coords()[1] / self.photoshop.zoomRatio - yoff
         sprite = self.currentAtlas.getSpriteForXY(x, y, True)
-        if event.button == 3 and sprite != None:
+        if event.button == 3:
             self.build_context_menu(event, sprite)
             return
         if self.modShift and sprite != None:
@@ -301,7 +302,7 @@ class KSEGraphicView(gtk.VBox):
     def _highlightAllCb(self, widget):
         self.photoshop.highlightAll(self.currentAtlas)
 
-    def _createAnimationCb(self, widget, sprite):
+    def _createAnimationCb(self, widget, sprite, event):
         self.photoshop.allSelected = False
         self._reAlignSprites()
         x = self.currentAtlas.selection.selected[0].texturex
@@ -359,6 +360,16 @@ class KSEGraphicView(gtk.VBox):
             self.modCtrl = False
             return True
         return False
+
+    def _addSpriteCb(self, widget, sprite, coords):
+        x = coords[0]
+        y = coords[1]
+        #Coords from the panel
+        w = self.workzone.app.activityView.graphics.graphics.width
+        h = self.workzone.app.activityView.graphics.graphics.height
+        sprite = self.currentAtlas.referenceSprite([w, h, x, y])
+        self.currentAtlas.selection.reset()
+        self.currentAtlas.selection.addObject(sprite)
 
 class KSESoundView(gtk.VBox):
     def __init__(self, workzone):

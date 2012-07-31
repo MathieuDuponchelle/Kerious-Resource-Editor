@@ -27,7 +27,7 @@ class KSEWindow:
         self.mainbox.show()
         self.window.add(self.mainbox)
 
-        self.window.set_icon_from_file("/home/duponc_m/Downloads/logo.png")
+        self.window.set_icon_from_file("assets/kselogo.png")
 
         self.activityView = KSEActivityView(fileName, self)
         accelGroup = gtk.AccelGroup()
