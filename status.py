@@ -13,7 +13,12 @@ from autoDetector import autoSpriteDetector
 from detectorSettings import AutoDetectorSettings
 from sounds import Sound
 
-from mediafilespreviewer import SimplePreviewWidget
+gstSet = True
+
+try:
+    from mediafilespreviewer import SimplePreviewWidget
+except ImportError:
+    gstSet = False
 
 #TODO : subclass this ...
 class KSEGraphicView(gtk.VBox):
@@ -393,12 +398,13 @@ class KSESoundView(gtk.VBox):
     def addSoundWidget(self, elem):
         hbox = gtk.HBox()
         sound = Sound(elem)
-        try:
-            pw = SimplePreviewWidget(self.workzone.app)
-            pw.previewUri("file://" + elem.attrib["path"])
-            hbox.pack_start(pw, True, True, 0)
-        except AttributeError:
-            print "We must set the pythonpath"
+        if gstSet:
+            try:
+                pw = SimplePreviewWidget(self.workzone.app)
+                pw.previewUri("file://" + elem.attrib["path"])
+                hbox.pack_start(pw, True, True, 0)
+            except AttributeError:
+                print "We must set the pythonpath"
         label = gtk.Label(elem.attrib["path"])
         entry = gtk.Entry()
         entry.set_text(elem.attrib["name"])

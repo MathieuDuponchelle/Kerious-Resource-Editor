@@ -30,15 +30,13 @@ import gtk
 import os
 import re
 import sys
-import gst
 import pango
 
 from gettext import gettext as _
 
 from loggable import Loggable
 from configure import get_ui_dir
-from ui import unpack_color, pack_color_32, pack_color_64, \
-    time_to_string, SPACING
+from ui import unpack_color, pack_color_32, pack_color_64, SPACING
 
 
 class DynamicWidget(object):

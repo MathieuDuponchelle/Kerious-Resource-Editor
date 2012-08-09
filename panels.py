@@ -3,7 +3,12 @@ import glib
 
 from interface import Button
 from utils import get_name_from_uri
-from mediafilespreviewer import PreviewWidget
+
+gstSet = True
+try:
+    from mediafilespreviewer import PreviewWidget
+except:
+    gstSet = False
 
 IMAGE_ADD="assets/list-add.svg"
 IMAGE_NEW="assets/document-new.png"
@@ -134,6 +139,29 @@ class GraphicsPanel(KSEPanel):
     def _heightChangedCb(self, spinner):
         self.height = spinner.get_value()
 
+    def _addResourcesCb(self, unused):
+        uris = None
+        chooser = gtk.FileChooserDialog(title = "Choose location", action = gtk.FILE_CHOOSER_ACTION_OPEN,
+                                        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                                   gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+        chooser.set_select_multiple(True)
+        try:
+            if gstSet:
+                pw = PreviewWidget(self.instance.app)
+                chooser.set_preview_widget(pw)
+                chooser.set_use_preview_label(False)
+                chooser.connect('update-preview', pw.add_preview_request)
+        except AttributeError:
+            print "We must set the pythonpath"
+        if chooser.run() == gtk.RESPONSE_ACCEPT:
+            uris = chooser.get_filenames()
+        chooser.destroy()
+        if uris:
+            self.instance.addImagesToResources(uris)
+            for uri in uris:
+                pixbuf = gtk.gdk.pixbuf_new_from_file(uri)
+                pixbuf = pixbuf.scale_simple(64, 64, gtk.gdk.INTERP_BILINEAR)
+                self.model.append([get_name_from_uri(uri), pixbuf, uri])
 
     def _buttonPressedCb(self, widget, event):
         widget.grab_focus()
