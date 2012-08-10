@@ -50,7 +50,7 @@ class GraphicSection(Section):
     def __init__(self, instance):
         self.app = instance
         self.graphics = GraphicsPanel(self)
-        Section.__init__(self, self.graphics, KSEGraphicWorkzone(self.app))
+        Section.__init__(self, self.graphics, KSEGraphicWorkzone(self.app, self.graphics))
 
     def createTree(self, tree):
         self.tree = tree.find("graphics")

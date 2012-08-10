@@ -5,6 +5,7 @@ from sections import GraphicSection, SoundSection
 from xml.etree.ElementTree import ElementTree
 from krfparser import KrfParser
 from indent import indent
+from error import ErrorMessage
 
 #TODO : connect to "page changed" to change currentSection
 class KSEActivityView(gtk.Notebook):

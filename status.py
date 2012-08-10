@@ -1,4 +1,5 @@
 import gtk
+import gtk.gdk
 import logging
 import pango
 
@@ -13,7 +14,12 @@ from autoDetector import autoSpriteDetector
 from detectorSettings import AutoDetectorSettings
 from sounds import Sound
 
-from mediafilespreviewer import SimplePreviewWidget
+gstSet = True
+
+try:
+    from mediafilespreviewer import SimplePreviewWidget
+except ImportError:
+    gstSet = False
 
 #TODO : subclass this ...
 class KSEGraphicView(gtk.VBox):
@@ -24,12 +30,18 @@ class KSEGraphicView(gtk.VBox):
     music tracks. Contains a Photoshop instance in the case of the graphic view.
     @cvar current : tuple of xmlNode + PILImage for this atlas
     """
-    def __init__(self, instance):
+    
+    ACTION_MOVE = 0
+    ACTION_RESIZE = 1 
+    
+    def __init__(self, instance, panel):
         gtk.VBox.__init__(self)
         self.factory = DrawableFactory()
         self.workzone = instance
         self.logger = logging.getLogger("KRFEditor")
         self.photoshop = Photoshop(self)
+        self.panel = panel
+        
         vbox = gtk.VBox()
         hbox = gtk.HBox()
         hbox.pack_start(gtk.Label("atlas"), False, False, 0)
@@ -38,12 +50,21 @@ class KSEGraphicView(gtk.VBox):
         self.atlases = {}
         self.selectedSprites = []
         self.currentAtlas = None
-        self.photoshop.connect("button-press-event", self._buttonReleasedCb)
+        self.photoshop.connect("button-press-event", self._buttonPressedCb)
+        self.photoshop.connect("button-release-event", self._buttonReleaseCb)
         self.photoshop.drawingArea.props.has_tooltip = True
         self.photoshop.drawingArea.connect("query-tooltip", self._queryTooltipCb)
 
         self.photoshop.eventBox.connect("key-press-event", self._keyPressedCb)
         self.photoshop.eventBox.connect("key-release-event", self._keyReleasedCb)
+        
+        self.photoshop.drawingArea.drag_dest_set(0, [], 0)
+        self.photoshop.drawingArea.connect("motion-notify-event", self._cursorMovedCb);
+        
+        self.photoshop.drawingArea.set_events(gtk.gdk.EXPOSURE_MASK | gtk.gdk.LEAVE_NOTIFY_MASK |
+                                              gtk.gdk.BUTTON_PRESS_MASK | gtk.gdk.POINTER_MOTION_MASK |
+                                              gtk.gdk.BUTTON_RELEASE_MASK |
+                                              gtk.gdk.POINTER_MOTION_HINT_MASK)
 
         self.detector = autoSpriteDetector()
 
@@ -83,6 +104,7 @@ class KSEGraphicView(gtk.VBox):
         self._setupPopup() #push the funk up
         self.modCtrl = False
         self.modShift = False
+        self.selected = None
 
     def loadAtlasFromXml(self, node, filePath):
         try:
@@ -143,7 +165,7 @@ class KSEGraphicView(gtk.VBox):
             self.atlases[atlas].drawable.save(self.atlases[atlas].path)
 
     #INTERNAL
-
+    
     def _getOffsetsFromXml(self, node):
         try:
             xoff = node.attrib["xoffset"]
@@ -252,25 +274,96 @@ class KSEGraphicView(gtk.VBox):
         vbox.show_all()
         tooltip.set_custom(vbox)
         return True
+    
+    def _buttonReleaseCb(self, widget, evet):
+        # Release selected sprite
+        if self.selected is not None:
+            self.selected.updateXmlNode()
+            self.selected = None
+            
+    # The position taken must be in projected coordinate
+    def _updateMousePointer(self, position):
+        # We don't want to update mouse pointer is something is selected
+        if self.selected is None and self.currentAtlas is not None:
+            foundCorner = False
+            spriteOver = self.currentAtlas.getSpriteForXY(position[0], position[1])
+            
+            if spriteOver is not None:
+                position[0] -= spriteOver.texturex
+                position[1] -= spriteOver.texturey
+                
+                if spriteOver.isInCorner(position):
+                    foundCorner = True
+                    self.workzone.app.window.get_window().set_cursor(gtk.gdk.Cursor(gtk.gdk.HAND1))
+                
+            if not foundCorner:
+                self.workzone.app.window.get_window().set_cursor(gtk.gdk.Cursor(gtk.gdk.ARROW))
+    
+    def _cursorMovedCb(self, widget, event):
+        position = self.photoshop.projectCoords(event.get_coords())
+        
+        if self.selected is not None:
+            
+            if self.selectedAction == KSEGraphicView.ACTION_MOVE:
+                position[0] -= self.selectedDecal[0]
+                position[1] -= self.selectedDecal[1]
+                
+                self.selected.setPosition(position)
+                
+                self.refreshDisplay()
+                
+            elif self.selectedAction == KSEGraphicView.ACTION_RESIZE:
+                newDimension = [position[0] - self.selected.texturex, position[1] - self.selected.texturey]
+                self.selected.resize(newDimension)
+                self.refreshDisplay()
+                
+            self.panel.updateSelectedSprite(self.selected, self)
+        else:
+            self._updateMousePointer(position)
+            
+    def refreshDisplay(self):
+        self.currentAtlas.selection.reset()
+        self.currentAtlas.selection.addObject(self.selected)
+        self.photoshop.highlightAll(self.currentAtlas)
 
-    def _buttonReleasedCb(self, widget, event):
+    def _buttonPressedCb(self, widget, event):
+        self.selected = None
+        
+        self.panel.updateSelectedSprite(None, self)
+        # Could happen if no atlas is loaded
+        if self.currentAtlas is None:
+            return
+        
         self.photoshop.drawingArea.grab_focus()
         xoff = self.photoshop.vruler.get_allocation().width
         yoff = self.photoshop.hruler.get_allocation().height
-        x = event.get_coords()[0] / self.photoshop.zoomRatio
-        y = event.get_coords()[1] / self.photoshop.zoomRatio
+        position = self.photoshop.projectCoords(event.get_coords())
+        x = position[0]
+        y = position[1]
         sprite = self.currentAtlas.getSpriteForXY(x, y, True)
 
         #3 == Right click
-        if event.button == 3 and sprite != None:
-            self.build_context_menu(event, sprite)
-            return
-        if self.modShift and sprite != None:
-            self.currentAtlas.selection.addObject(sprite)
-        elif sprite != None:
-            self.currentAtlas.selection.reset()
-            self.currentAtlas.selection.addObject(sprite)
-        if sprite == None:
+        if sprite is not None:
+            if event.button == 1:
+                if self.modShift:
+                    self.currentAtlas.selection.addObject(sprite)
+                else:
+                    self.selected = sprite
+                    self.selectedDecal = [x - sprite.texturex, y - sprite.texturey]
+                    if sprite.isInCorner(self.selectedDecal):
+                        self.selectedAction = KSEGraphicView.ACTION_RESIZE
+                    else:
+                        self.selectedAction = KSEGraphicView.ACTION_MOVE
+                    self.panel.updateSelectedSprite(sprite, self)
+                    self.currentAtlas.selection.reset()
+                    self.currentAtlas.selection.addObject(sprite)
+            elif event.button == 3:
+                self.build_context_menu(event, sprite)
+                return
+            else:
+                # Nothing to do for now
+                pass
+        else:
             self._tryAnim(x, y, event)
             return
 
@@ -393,12 +486,13 @@ class KSESoundView(gtk.VBox):
     def addSoundWidget(self, elem):
         hbox = gtk.HBox()
         sound = Sound(elem)
-        try:
-            pw = SimplePreviewWidget(self.workzone.app)
-            pw.previewUri("file://" + elem.attrib["path"])
-            hbox.pack_start(pw, True, True, 0)
-        except AttributeError:
-            print "We must set the pythonpath"
+        if gstSet:
+            try:
+                pw = SimplePreviewWidget(self.workzone.app)
+                pw.previewUri("file://" + elem.attrib["path"])
+                hbox.pack_start(pw, True, True, 0)
+            except AttributeError:
+                print "We must set the pythonpath"
         label = gtk.Label(elem.attrib["path"])
         entry = gtk.Entry()
         entry.set_text(elem.attrib["name"])

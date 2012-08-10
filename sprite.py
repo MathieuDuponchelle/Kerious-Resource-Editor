@@ -28,11 +28,36 @@ class Sprite:
         self.xmlNode.attrib["name"] = self.name
 
     def updateXmlNode(self):
-        self.xmlNode.attrib["texturex"] = str(self.texturex)
-        self.xmlNode.attrib["texturey"] = str(self.texturey)
-        self.xmlNode.attrib["texturew"] = str(self.texturew)
-        self.xmlNode.attrib["textureh"] = str(self.textureh)
-
+        self.xmlNode.attrib["texturex"] = str(int(self.texturex))
+        self.xmlNode.attrib["texturey"] = str(int(self.texturey))
+        self.xmlNode.attrib["texturew"] = str(int(self.texturew))
+        self.xmlNode.attrib["textureh"] = str(int(self.textureh))
+        
+    def setPosition(self, position):
+        self.texturex = position[0]
+        self.texturey = position[1]
+        
+    def resize(self, vector):
+        if vector[0] < 0:
+            vector[0] = 0
+        if vector[1] < 0:
+            vector[1] = 0
+        
+        self.texturew = vector[0]
+        self.textureh = vector[1]
+        
+    def isInCorner(self, position):
+        inCorner = False
+        
+        if position[0] > 0 and position[1] > 0:
+            if position[0] < self.texturew and position[1] < self.textureh:
+                decalCornerX = self.texturew - position[0]
+                decalCornerY = self.textureh - position[1]
+                if decalCornerX < 10 and decalCornerY < 10:
+                    inCorner = True
+        return inCorner
+        
+        
 class Animation(Sprite):
     def __init__(self, path, texturex, texturey, texturew, textureh, tilelen):
         Sprite.__init__(self, path, texturex, texturey, texturew, textureh)

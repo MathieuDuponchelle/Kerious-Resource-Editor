@@ -1,10 +1,8 @@
 import gtk
-import gst
 import logging
 
 from activity import KSEActivityView
 from interface import KSEToolBar
-from settings import GlobalSettings
 from undo import UndoableActionLog
 from startupwizard import StartUpWizard
 
@@ -21,7 +19,7 @@ class KSEWindow:
         self.window.set_title(WINDOWTITLE)
         self.window.set_border_width(BORDERWIDTH)
         self._initLogging(debug)
-        self.settings = GlobalSettings()
+        self.settings = None
  
         self.mainbox = gtk.VBox(False, 0)
         self.mainbox.show()
@@ -60,7 +58,7 @@ class KSEWindow:
 
     def _initLogging(self, debug):
         self.logger = logging.getLogger("KRFEditor")
-        hdlr = logging.FileHandler('/var/tmp/KRFEditor.log')
+        hdlr = logging.FileHandler('KRFEditor.log')
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         hdlr.setFormatter(formatter)
         self.logger.addHandler(hdlr)

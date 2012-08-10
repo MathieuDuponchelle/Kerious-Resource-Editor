@@ -3,7 +3,12 @@ import glib
 
 from interface import Button
 from utils import get_name_from_uri
-from mediafilespreviewer import PreviewWidget
+
+gstSet = True
+try:
+    from mediafilespreviewer import PreviewWidget
+except:
+    gstSet = False
 
 IMAGE_ADD="assets/list-add.svg"
 IMAGE_NEW="assets/document-new.png"
@@ -105,15 +110,51 @@ class GraphicsPanel(KSEPanel):
         pixbufcol.pack_start(pixcell)
         pixbufcol.add_attribute(pixcell, 'pixbuf', 1)
 
+        self.selectedSprite = None
         self.width = 32
         self.height = 32
-        self._addSpinButton("width : ", self._widthChangedCb)
-        self._addSpinButton("height : ", self._heightChangedCb)
+        self._addSpinButton("Base Width : ", self._widthChangedCb)
+        self._addSpinButton("Base Height : ", self._heightChangedCb)
+        self.spinX = self._addSpinButton("Selected X : ", self._selectedXChangedCb)
+        self.spinY = self._addSpinButton("Selected Y : ", self._selectedYChangedCb)
+        self.spinWidth = self._addSpinButton("Selected Width : ", self._selectedWidthChangedCb)
+        self.spinHeight = self._addSpinButton("Selected Height : ", self._selectedHeightChangedCb)
 
         self.show_all()
+        
+    def updateSelectedSprite(self, selected, graphic):
+        self.selectedSprite = selected
+        self.graphic = graphic
+        
+        if selected is not None:
+            self.spinX.set_value(selected.texturex)
+            self.spinY.set_value(selected.texturey)
+            self.spinWidth.set_value(selected.texturew)
+            self.spinHeight.set_value(selected.textureh)
 
 
     #INTERNAL
+    
+    def _selectedXChangedCb(self, spinner):
+        if self.selectedSprite is not None:
+            self.selectedSprite.texturex = spinner.get_value()
+            self.graphic.refreshDisplay()
+            
+    def _selectedYChangedCb(self, spinner):
+        if self.selectedSprite is not None:
+            self.selectedSprite.texturey = spinner.get_value()
+            self.graphic.refreshDisplay()
+
+    def _selectedWidthChangedCb(self, spinner):
+        if self.selectedSprite is not None:
+            self.selectedSprite.texturew = spinner.get_value()
+            self.graphic.refreshDisplay()
+
+    def _selectedHeightChangedCb(self, spinner):
+        if self.selectedSprite is not None:
+            self.selectedSprite.textureh = spinner.get_value()
+            self.graphic.refreshDisplay()
+    
 
     def _addSpinButton(self, text, function):
         hbox = gtk.HBox()
@@ -127,6 +168,7 @@ class GraphicsPanel(KSEPanel):
         hbox.show_all()
         self.pack_start(hbox, False, False, 0)
         spinbutton.connect("button-press-event", self._buttonPressedCb)
+        return spinbutton
 
     def _widthChangedCb(self, spinner):
         self.width = spinner.get_value()
@@ -134,6 +176,29 @@ class GraphicsPanel(KSEPanel):
     def _heightChangedCb(self, spinner):
         self.height = spinner.get_value()
 
+    def _addResourcesCb(self, unused):
+        uris = None
+        chooser = gtk.FileChooserDialog(title = "Choose location", action = gtk.FILE_CHOOSER_ACTION_OPEN,
+                                        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                                   gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+        chooser.set_select_multiple(True)
+        try:
+            if gstSet:
+                pw = PreviewWidget(self.instance.app)
+                chooser.set_preview_widget(pw)
+                chooser.set_use_preview_label(False)
+                chooser.connect('update-preview', pw.add_preview_request)
+        except AttributeError:
+            print "We must set the pythonpath"
+        if chooser.run() == gtk.RESPONSE_ACCEPT:
+            uris = chooser.get_filenames()
+        chooser.destroy()
+        if uris:
+            self.instance.addImagesToResources(uris)
+            for uri in uris:
+                pixbuf = gtk.gdk.pixbuf_new_from_file(uri)
+                pixbuf = pixbuf.scale_simple(64, 64, gtk.gdk.INTERP_BILINEAR)
+                self.model.append([get_name_from_uri(uri), pixbuf, uri])
 
     def _buttonPressedCb(self, widget, event):
         widget.grab_focus()
