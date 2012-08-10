@@ -30,6 +30,10 @@ class KSEGraphicView(gtk.VBox):
     music tracks. Contains a Photoshop instance in the case of the graphic view.
     @cvar current : tuple of xmlNode + PILImage for this atlas
     """
+    
+    ACTION_MOVE = 0
+    ACTION_RESIZE = 1 
+    
     def __init__(self, instance):
         gtk.VBox.__init__(self)
         self.factory = DrawableFactory()
@@ -274,19 +278,49 @@ class KSEGraphicView(gtk.VBox):
         if self.selected is not None:
             self.selected.updateXmlNode()
             self.selected = None
+            
+    # The position taken must be in projected coordinate
+    def _updateMousePointer(self, position):
+        # We don't want to update mouse pointer is something is selected
+        if self.selected is None and self.currentAtlas is not None:
+            foundCorner = False
+            spriteOver = self.currentAtlas.getSpriteForXY(position[0], position[1])
+            
+            if spriteOver is not None:
+                position[0] -= spriteOver.texturex
+                position[1] -= spriteOver.texturey
+                
+                if spriteOver.isInCorner(position):
+                    foundCorner = True
+                    self.workzone.app.window.get_window().set_cursor(gtk.gdk.Cursor(gtk.gdk.HAND1))
+                
+            if not foundCorner:
+                self.workzone.app.window.get_window().set_cursor(gtk.gdk.Cursor(gtk.gdk.ARROW))
     
     def _cursorMovedCb(self, widget, event):
+        position = self.photoshop.projectCoords(event.get_coords())
+        
         if self.selected is not None:
-            position = self.photoshop.projectCoords(event.get_coords())
             
-            position[0] += self.selectedDecal[0]
-            position[1] += self.selectedDecal[1]
+            if self.selectedAction == KSEGraphicView.ACTION_MOVE:
+                position[0] -= self.selectedDecal[0]
+                position[1] -= self.selectedDecal[1]
+                
+                self.selected.setPosition(position)
+                
+                self.refreshDisplay()
+                
+            elif self.selectedAction == KSEGraphicView.ACTION_RESIZE:
+                newDimension = [position[0] - self.selected.texturex, position[1] - self.selected.texturey]
+                self.selected.resize(newDimension)
+                self.refreshDisplay()
+        else:
+            self._updateMousePointer(position)
             
-            self.selected.setPosition(position)
-            
-            self.currentAtlas.selection.reset()
-            self.currentAtlas.selection.addObject(self.selected)
-            self.photoshop.highlightAll(self.currentAtlas)
+    def refreshDisplay(self):
+        self.currentAtlas.selection.reset()
+        self.currentAtlas.selection.addObject(self.selected)
+        self.photoshop.highlightAll(self.currentAtlas)
 
     def _buttonPressedCb(self, widget, event):
         self.selected = None
@@ -306,7 +340,11 @@ class KSEGraphicView(gtk.VBox):
                     self.currentAtlas.selection.addObject(sprite)
                 else:
                     self.selected = sprite
-                    self.selectedDecal = [sprite.texturex - x, sprite.texturey - y]
+                    self.selectedDecal = [x - sprite.texturex, y - sprite.texturey]
+                    if sprite.isInCorner(self.selectedDecal):
+                        self.selectedAction = KSEGraphicView.ACTION_RESIZE
+                    else:
+                        self.selectedAction = KSEGraphicView.ACTION_MOVE
                     self.currentAtlas.selection.reset()
                     self.currentAtlas.selection.addObject(sprite)
             elif event.button == 3:
