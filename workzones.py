@@ -67,9 +67,9 @@ class KSEWorkzone(gtk.VPaned):
         pass
 
 class KSEGraphicWorkzone(KSEWorkzone):
-    def __init__(self, instance):
+    def __init__(self, instance, panel):
         self.app = instance
-        self.notebook = KSEGraphicView(self)
+        self.notebook = KSEGraphicView(self, panel)
         KSEWorkzone.__init__(self)
         self.sectionCallbacks = [self._getAtlasFromPath]
         self.current = None

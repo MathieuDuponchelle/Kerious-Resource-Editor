@@ -110,15 +110,51 @@ class GraphicsPanel(KSEPanel):
         pixbufcol.pack_start(pixcell)
         pixbufcol.add_attribute(pixcell, 'pixbuf', 1)
 
+        self.selectedSprite = None
         self.width = 32
         self.height = 32
-        self._addSpinButton("width : ", self._widthChangedCb)
-        self._addSpinButton("height : ", self._heightChangedCb)
+        self._addSpinButton("Base Width : ", self._widthChangedCb)
+        self._addSpinButton("Base Height : ", self._heightChangedCb)
+        self.spinX = self._addSpinButton("Selected X : ", self._selectedXChangedCb)
+        self.spinY = self._addSpinButton("Selected Y : ", self._selectedYChangedCb)
+        self.spinWidth = self._addSpinButton("Selected Width : ", self._selectedWidthChangedCb)
+        self.spinHeight = self._addSpinButton("Selected Height : ", self._selectedHeightChangedCb)
 
         self.show_all()
+        
+    def updateSelectedSprite(self, selected, graphic):
+        self.selectedSprite = selected
+        self.graphic = graphic
+        
+        if selected is not None:
+            self.spinX.set_value(selected.texturex)
+            self.spinY.set_value(selected.texturey)
+            self.spinWidth.set_value(selected.texturew)
+            self.spinHeight.set_value(selected.textureh)
 
 
     #INTERNAL
+    
+    def _selectedXChangedCb(self, spinner):
+        if self.selectedSprite is not None:
+            self.selectedSprite.texturex = spinner.get_value()
+            self.graphic.refreshDisplay()
+            
+    def _selectedYChangedCb(self, spinner):
+        if self.selectedSprite is not None:
+            self.selectedSprite.texturey = spinner.get_value()
+            self.graphic.refreshDisplay()
+
+    def _selectedWidthChangedCb(self, spinner):
+        if self.selectedSprite is not None:
+            self.selectedSprite.texturew = spinner.get_value()
+            self.graphic.refreshDisplay()
+
+    def _selectedHeightChangedCb(self, spinner):
+        if self.selectedSprite is not None:
+            self.selectedSprite.textureh = spinner.get_value()
+            self.graphic.refreshDisplay()
+    
 
     def _addSpinButton(self, text, function):
         hbox = gtk.HBox()
@@ -132,6 +168,7 @@ class GraphicsPanel(KSEPanel):
         hbox.show_all()
         self.pack_start(hbox, False, False, 0)
         spinbutton.connect("button-press-event", self._buttonPressedCb)
+        return spinbutton
 
     def _widthChangedCb(self, spinner):
         self.width = spinner.get_value()

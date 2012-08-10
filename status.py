@@ -34,12 +34,14 @@ class KSEGraphicView(gtk.VBox):
     ACTION_MOVE = 0
     ACTION_RESIZE = 1 
     
-    def __init__(self, instance):
+    def __init__(self, instance, panel):
         gtk.VBox.__init__(self)
         self.factory = DrawableFactory()
         self.workzone = instance
         self.logger = logging.getLogger("KRFEditor")
         self.photoshop = Photoshop(self)
+        self.panel = panel
+        
         vbox = gtk.VBox()
         hbox = gtk.HBox()
         hbox.pack_start(gtk.Label("atlas"), False, False, 0)
@@ -314,6 +316,8 @@ class KSEGraphicView(gtk.VBox):
                 newDimension = [position[0] - self.selected.texturex, position[1] - self.selected.texturey]
                 self.selected.resize(newDimension)
                 self.refreshDisplay()
+                
+            self.panel.updateSelectedSprite(self.selected, self)
         else:
             self._updateMousePointer(position)
             
@@ -324,6 +328,11 @@ class KSEGraphicView(gtk.VBox):
 
     def _buttonPressedCb(self, widget, event):
         self.selected = None
+        
+        self.panel.updateSelectedSprite(None, self)
+        # Could happen if no atlas is loaded
+        if self.currentAtlas is None:
+            return
         
         self.photoshop.drawingArea.grab_focus()
         xoff = self.photoshop.vruler.get_allocation().width
@@ -345,6 +354,7 @@ class KSEGraphicView(gtk.VBox):
                         self.selectedAction = KSEGraphicView.ACTION_RESIZE
                     else:
                         self.selectedAction = KSEGraphicView.ACTION_MOVE
+                    self.panel.updateSelectedSprite(sprite, self)
                     self.currentAtlas.selection.reset()
                     self.currentAtlas.selection.addObject(sprite)
             elif event.button == 3:
