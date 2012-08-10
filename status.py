@@ -1,4 +1,5 @@
 import gtk
+import gtk.gdk
 import logging
 import pango
 
@@ -43,12 +44,21 @@ class KSEGraphicView(gtk.VBox):
         self.atlases = {}
         self.selectedSprites = []
         self.currentAtlas = None
-        self.photoshop.connect("button-press-event", self._buttonReleasedCb)
+        self.photoshop.connect("button-press-event", self._buttonPressedCb)
+        self.photoshop.connect("button-release-event", self._buttonReleaseCb)
         self.photoshop.drawingArea.props.has_tooltip = True
         self.photoshop.drawingArea.connect("query-tooltip", self._queryTooltipCb)
 
         self.photoshop.eventBox.connect("key-press-event", self._keyPressedCb)
         self.photoshop.eventBox.connect("key-release-event", self._keyReleasedCb)
+        
+        self.photoshop.drawingArea.drag_dest_set(0, [], 0)
+        self.photoshop.drawingArea.connect("motion-notify-event", self._cursorMovedCb);
+        
+        self.photoshop.drawingArea.set_events(gtk.gdk.EXPOSURE_MASK | gtk.gdk.LEAVE_NOTIFY_MASK |
+                                              gtk.gdk.BUTTON_PRESS_MASK | gtk.gdk.POINTER_MOTION_MASK |
+                                              gtk.gdk.BUTTON_RELEASE_MASK |
+                                              gtk.gdk.POINTER_MOTION_HINT_MASK)
 
         self.detector = autoSpriteDetector()
 
@@ -88,6 +98,7 @@ class KSEGraphicView(gtk.VBox):
         self._setupPopup() #push the funk up
         self.modCtrl = False
         self.modShift = False
+        self.selected = None
 
     def loadAtlasFromXml(self, node, filePath):
         try:
@@ -148,7 +159,7 @@ class KSEGraphicView(gtk.VBox):
             self.atlases[atlas].drawable.save(self.atlases[atlas].path)
 
     #INTERNAL
-
+    
     def _getOffsetsFromXml(self, node):
         try:
             xoff = node.attrib["xoffset"]
@@ -257,25 +268,54 @@ class KSEGraphicView(gtk.VBox):
         vbox.show_all()
         tooltip.set_custom(vbox)
         return True
+    
+    def _buttonReleaseCb(self, widget, evet):
+        # Release selected sprite
+        if self.selected is not None:
+            self.selected.updateXmlNode()
+            self.selected = None
+    
+    def _cursorMovedCb(self, widget, event):
+        if self.selected is not None:
+            position = self.photoshop.projectCoords(event.get_coords())
+            
+            position[0] += self.selectedDecal[0]
+            position[1] += self.selectedDecal[1]
+            
+            self.selected.setPosition(position)
+            
+            self.currentAtlas.selection.reset()
+            self.currentAtlas.selection.addObject(self.selected)
+            self.photoshop.highlightAll(self.currentAtlas)
 
-    def _buttonReleasedCb(self, widget, event):
+    def _buttonPressedCb(self, widget, event):
+        self.selected = None
+        
         self.photoshop.drawingArea.grab_focus()
         xoff = self.photoshop.vruler.get_allocation().width
         yoff = self.photoshop.hruler.get_allocation().height
-        x = event.get_coords()[0] / self.photoshop.zoomRatio
-        y = event.get_coords()[1] / self.photoshop.zoomRatio
+        position = self.photoshop.projectCoords(event.get_coords())
+        x = position[0]
+        y = position[1]
         sprite = self.currentAtlas.getSpriteForXY(x, y, True)
 
         #3 == Right click
-        if event.button == 3 and sprite != None:
-            self.build_context_menu(event, sprite)
-            return
-        if self.modShift and sprite != None:
-            self.currentAtlas.selection.addObject(sprite)
-        elif sprite != None:
-            self.currentAtlas.selection.reset()
-            self.currentAtlas.selection.addObject(sprite)
-        if sprite == None:
+        if sprite is not None:
+            if event.button == 1:
+                if self.modShift:
+                    self.currentAtlas.selection.addObject(sprite)
+                else:
+                    self.selected = sprite
+                    self.selectedDecal = [sprite.texturex - x, sprite.texturey - y]
+                    self.currentAtlas.selection.reset()
+                    self.currentAtlas.selection.addObject(sprite)
+            elif event.button == 3:
+                self.build_context_menu(event, sprite)
+                return
+            else:
+                # Nothing to do for now
+                pass
+        else:
             self._tryAnim(x, y, event)
             return
 

@@ -28,10 +28,17 @@ class Sprite:
         self.xmlNode.attrib["name"] = self.name
 
     def updateXmlNode(self):
-        self.xmlNode.attrib["texturex"] = str(self.texturex)
-        self.xmlNode.attrib["texturey"] = str(self.texturey)
-        self.xmlNode.attrib["texturew"] = str(self.texturew)
-        self.xmlNode.attrib["textureh"] = str(self.textureh)
+        self.xmlNode.attrib["texturex"] = str(int(self.texturex))
+        self.xmlNode.attrib["texturey"] = str(int(self.texturey))
+        self.xmlNode.attrib["texturew"] = str(int(self.texturew))
+        self.xmlNode.attrib["textureh"] = str(int(self.textureh))
+        
+    def setPosition(self, position):
+        self.texturex = position[0]
+        self.texturey = position[1]
+        
+        
+        
 
 class Animation(Sprite):
     def __init__(self, path, texturex, texturey, texturew, textureh, tilelen):

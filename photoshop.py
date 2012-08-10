@@ -23,7 +23,7 @@ class Photoshop(gtk.ScrolledWindow):
     """
     def __init__(self, status):
         gtk.ScrolledWindow.__init__(self)
-        self.logger = logging.getLogger("KRFEditor")
+        self.logger = logging.getLogger("KRFEditor")    
 
         self.status = status
 
@@ -159,7 +159,7 @@ class Photoshop(gtk.ScrolledWindow):
         elif self.currentSelection:
             for elem in self.currentSelection:
                 self.highlight(elem, True)
-
+                
     def _motionNotifyCb(self, ruler, event):
         coords = event.get_coords()
         self.status.posLabel.set_text(str(coords[0] / self.zoomRatio) + "," + str(coords[1] / self.zoomRatio))
@@ -175,3 +175,11 @@ class Photoshop(gtk.ScrolledWindow):
         self.currentSelection = selection.selected
         for elem in self.currentSelection:
             self.highlight(elem, True)
+            
+    def projectCoords(self, coords):
+        realCoords = [0, 0]
+        
+        realCoords[0] = coords[0] / self.zoomRatio
+        realCoords[1] = coords[1] / self.zoomRatio
+        
+        return realCoords
