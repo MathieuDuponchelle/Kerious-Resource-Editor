@@ -105,7 +105,7 @@ class KSEGraphicView(gtk.VBox):
         self.modCtrl = False
         self.modShift = False
         self.selected = None
-
+        
     def loadAtlasFromXml(self, node, filePath):
         try:
             atlas = self.atlases[filePath]
@@ -244,6 +244,9 @@ class KSEGraphicView(gtk.VBox):
         self.photoshop.displayImage(atlas.drawable.image)
 
     def _doSomethingCb(self, menuItem, sprite, event):
+        self.editSprite(sprite)
+        
+    def editSprite(self, sprite):
         spriteEditor = SpriteEditor(sprite)
 
     def _queryTooltipCb(self, widget, x, y, mode, tooltip):
@@ -348,15 +351,18 @@ class KSEGraphicView(gtk.VBox):
                 if self.modShift:
                     self.currentAtlas.selection.addObject(sprite)
                 else:
-                    self.selected = sprite
-                    self.selectedDecal = [x - sprite.texturex, y - sprite.texturey]
-                    if sprite.isInCorner(self.selectedDecal):
-                        self.selectedAction = KSEGraphicView.ACTION_RESIZE
-                    else:
-                        self.selectedAction = KSEGraphicView.ACTION_MOVE
-                    self.panel.updateSelectedSprite(sprite, self)
-                    self.currentAtlas.selection.reset()
-                    self.currentAtlas.selection.addObject(sprite)
+                    if event.type == gtk.gdk.BUTTON_PRESS:
+                        self.selected = sprite
+                        self.selectedDecal = [x - sprite.texturex, y - sprite.texturey]
+                        if sprite.isInCorner(self.selectedDecal):
+                            self.selectedAction = KSEGraphicView.ACTION_RESIZE
+                        else:
+                            self.selectedAction = KSEGraphicView.ACTION_MOVE
+                        self.panel.updateSelectedSprite(sprite, self)
+                        self.currentAtlas.selection.reset()
+                        self.currentAtlas.selection.addObject(sprite)
+                    elif event.type == gtk.gdk._2BUTTON_PRESS or event.type == gtk.gdk._3BUTTON_PRESS:
+                        self.editSprite(sprite)
             elif event.button == 3:
                 self.build_context_menu(event, sprite)
                 return

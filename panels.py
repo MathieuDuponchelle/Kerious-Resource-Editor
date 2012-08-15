@@ -154,12 +154,11 @@ class GraphicsPanel(KSEPanel):
         if self.selectedSprite is not None:
             self.selectedSprite.textureh = spinner.get_value()
             self.graphic.refreshDisplay()
-    
 
     def _addSpinButton(self, text, function):
         hbox = gtk.HBox()
         hbox.pack_start(gtk.Label(text), False, False, 0)
-        adj = gtk.Adjustment(32, 1.0, 102400.0, 1.0, 5.0, 0.0)
+        adj = gtk.Adjustment(32, 0, 102400.0, 1.0, 5.0, 0.0)
         spinbutton = gtk.SpinButton(adj, 0, 0)
         spinbutton.set_wrap(True)
         spinbutton.show()
