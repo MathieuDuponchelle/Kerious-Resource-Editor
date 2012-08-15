@@ -111,8 +111,11 @@ class KSEGraphicWorkzone(KSEWorkzone):
         return self.atlases[path]
 
     def _spriteAddedCb(self, atlas, sprite):
+        # Hack
+        if sprite.xmlNode is not None:
+            sprite.name = sprite.xmlNode.attrib["name"]
         atlas = self.model.get_iter(self.current)
-        sprite.iter = self.model.append(atlas, [sprite.path])
+        sprite.iter = self.model.append(atlas, [sprite.name])
 
     def _spriteRemovedCb(self, atlas, sprite):
         atlas = self.model.get_iter(self.current)
