@@ -19,7 +19,7 @@ class Sprite:
         self.texturey = int(texturey)
         self.texturew = int(texturew)
         self.textureh = int(textureh)
-        self.name = None
+        self.name = ""
         self.iter = None
         self.xmlNode = None
         self.isAnim = False
