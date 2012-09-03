@@ -8,10 +8,10 @@ def Image_to_GdkPixbuf (image):
     file = StringIO.StringIO ()
     if image.mode != "RGBA":
         image = image.convert("RGBA")
-    image.save (file, 'ppm')
+    image.save (file, 'png')
     contents = file.getvalue()
     file.close ()
-    loader = gtk.gdk.PixbufLoader ('pnm')
+    loader = gtk.gdk.PixbufLoader ('png')
     loader.write (contents, len (contents))
     pixbuf = loader.get_pixbuf()
     loader.close ()
@@ -55,6 +55,8 @@ class Photoshop(gtk.ScrolledWindow):
         self.modShift = False
         self.modCtrl = False
         self.currentSelection = None
+
+        self.pixmap = None
 
         self.show_all()
 
@@ -133,8 +135,21 @@ class Photoshop(gtk.ScrolledWindow):
         self.gc.set_foreground(color)
 
     def _drawImage(self):
+        imgw = self.pixbuf.get_width()
+        imgh = self.pixbuf.get_height()
+
+        self.pixmap = gtk.gdk.Pixmap(self.window, imgw, imgh)
+        self.ctx = self.drawingArea.window.cairo_create()
+        self.ct = gtk.gdk.CairoContext(self.ctx)
+
+        self.pixmap.draw_rectangle(self.gc, True, 0, 0, imgw, imgh)
+
         self.drawingArea.set_size_request(int(self.zoomRatio * self.drawable.size[0]), int(self.zoomRatio * self.drawable.size[1]))
-        self.drawingArea.window.draw_pixbuf(None, self.pixbuf, 0, 0, 0, 0, -1, -1, gtk.gdk.RGB_DITHER_NONE, 0, 0)
+        self.pixmap.draw_pixbuf(self.gc, self.pixbuf, 0, 0, 0, 0)
+        self.ct.set_source_pixmap(self.pixmap,0,0)
+        self.ctx.paint()
+        self.ctx.stroke()
+
         xsize = self.drawable.size[0] if self.drawable.size[0] > self.drawingArea.get_allocation().width else self.drawingArea.get_allocation().width
         ysize = self.drawable.size[1] if self.drawable.size[1] > self.drawingArea.get_allocation().height else self.drawingArea.get_allocation().height
         self.hruler.set_range(0.0, float(xsize / self.zoomRatio), 0.0, float(self.drawable.size[0] / self.zoomRatio))
@@ -142,14 +157,14 @@ class Photoshop(gtk.ScrolledWindow):
 
     def _exposeEventCb(self, widget, event):
         #First, draw the atlas itself
-
         if self.gc == None:
             self.gc = self.get_style().fg_gc[gtk.STATE_NORMAL]
             self.color = self.gc.get_colormap().alloc('LimeGreen')
             self.gc.set_fill(gtk.gdk.SOLID)
-            self.gc.set_line_attributes(3, 0, gtk.gdk.CAP_NOT_LAST, gtk.gdk.JOIN_ROUND)            
+            self.gc.set_line_attributes(3, 0, gtk.gdk.CAP_NOT_LAST, gtk.gdk.JOIN_ROUND)
         if self.pixbuf == None:
             return
+
         self._drawImage()
 
         #Then, redraw highlighted sprites
