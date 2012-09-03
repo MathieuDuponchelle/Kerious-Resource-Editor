@@ -193,7 +193,7 @@ class GraphicsPanel(KSEPanel):
             uris = chooser.get_filenames()
         chooser.destroy()
         if uris:
-            self.instance.addImagesToResources(uris)
+            self.instance.addToResources(uris)
             for uri in uris:
                 pixbuf = gtk.gdk.pixbuf_new_from_file(uri)
                 pixbuf = pixbuf.scale_simple(64, 64, gtk.gdk.INTERP_BILINEAR)

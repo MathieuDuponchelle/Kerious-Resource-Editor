@@ -1,7 +1,7 @@
 import argparse
 
 UI_PATH = "ui"
-NAME_LENGTH = 40
+NAME_LENGTH = 20
 
 def make_ui_path(fileName):
     return UI_PATH + "/" + fileName + ".ui"
