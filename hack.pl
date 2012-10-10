@@ -42,6 +42,8 @@ my $samplestep="8";
 
 open (MYFILE, '>lol');
 
+$SIG{'INT'} = sub {close (MYFILE); exit(0);};
+
 my $original = Image::Magick->new;
 $original->Read($in);
 
